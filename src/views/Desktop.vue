@@ -23,6 +23,7 @@
 
     <!-- 功能菜单 -->
     <div class="dashboard">
+<!--      <SideMenu />-->
       <div class="card" v-for="item in menuItems" :key="item.id" @click="navigateTo(item.route)">
         <div class="card-header">
           <div class="card-icon">{{ item.icon }}</div>
@@ -80,7 +81,7 @@ const stats = ref([
 // 菜单项配置（可扩展）
 const menuItems = ref([
   { id: 1, icon: '📁', title: '文件管理', route: '/file-manager', description: '浏览、上传、下载和管理您的文件' },
-  { id: 2, icon: '⚙️', title: '系统设置', route: '/settings', description: '配置系统参数和网络设置' },
+  { id: 2, icon: '⚙️', title: '系统设置', route: '/ini-editor', description: '配置系统参数和网络设置' },
   { id: 3, icon: '💾', title: '硬盘管理', route: '/storage', description: '查看硬盘健康状态和RAID配置' },
   { id: 4, icon: '🖥️', title: '设备信息', route: '/device-info', description: '查看硬件信息和系统状态' },
   { id: 5, icon: '📦', title: '备份与同步', route: '/backup', description: '设置自动备份任务和云同步' },

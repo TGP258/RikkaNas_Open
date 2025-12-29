@@ -2,7 +2,7 @@
   <div class="container">
     <div class="header">
       <img class="logo" src="../assets/logo.svg" alt="RikkaNas Logo">
-      <h1>RikkaNas</h1>
+      <h1>RikaOS</h1>
       <p>个人云存储解决方案</p>
     </div>
 

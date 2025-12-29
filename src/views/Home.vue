@@ -9,7 +9,7 @@ import TheWelcome from '../components/TheWelcome.vue'
     <img alt="RikkaNas logo" class="logo" src="../assets/logo.svg" width="125" height="125" style="place-items: center" />
 
     <div class="wrapper">
-      <HelloWorld msg="您已成功安装RikkaNas！" />
+      <HelloWorld msg="您已成功安装RikaOS！" />
     </div>
   </header>
   <main>

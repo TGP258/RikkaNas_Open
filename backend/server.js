@@ -1,5 +1,6 @@
 // backend/server.js
 const express = require('express');
+const iniRoutes = require('./routes/iniRoutes');
 const mysql = require('mysql2');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -8,6 +9,12 @@ const { Pool } = require('pg'); // 从 'pg' 库中导入 Pool
 const app = express();
 app.use(cors());
 app.use(express.json());
+// app.use(express.json());
+// 可选：配置跨域（开发环境）
+app.use(require('cors')());
+
+// 核心：注册路由，拼接为 /api/ini/save
+app.use('/api/ini', iniRoutes);
 
 // 创建数据库连接
 const db = mysql.createConnection({
