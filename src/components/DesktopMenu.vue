@@ -14,12 +14,13 @@
       </router-link>
     </div>
   </div>
+
 </template>
 
 <script setup>
 import { ref } from 'vue';
 
-// 你的菜单数据
+// 主页菜单数据
 const menuItems = ref([
   { id: 1, icon: '📁', title: '文件管理', route: '/file-manager', description: '浏览、上传、下载和管理您的文件' },
   { id: 2, icon: '⚙️', title: '系统设置', route: '/ini-editor', description: '配置系统参数和网络设置' },
@@ -29,6 +30,7 @@ const menuItems = ref([
   { id: 6, icon: '📱', title: '应用中心', route: '/apps', description: '安装和管理NAS应用程序' },
   { id: 7, icon: '🐟', title: 'Docker管理', route: '/docker', description: '安装和管理Docker镜像' }
 ]);
+
 </script>
 
 <style scoped>

@@ -10,7 +10,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 // app.use(express.json());
-// 可选：配置跨域（开发环境）
+// 此处可配置跨域（开发环境）
+// 跨域中间件
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+});
 app.use(require('cors')());
 
 // 核心：注册路由，拼接为 /api/ini/save
@@ -158,6 +165,11 @@ app.get('/api/admin/info', async (req, res) => {
         res.status(500).json({ error: '服务器错误' });
     }
 });
+const system = require('./system'); // 路径：和 server.js 同级，直接写文件名
+// 注册路由，统一添加前缀 /api/system（接口完整路径变为 /api/system/stats）
+app.use('/api/system', system);
+console.log('系统服务：监控 已启动')
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('服务器运行在端口' + PORT);

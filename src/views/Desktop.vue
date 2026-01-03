@@ -3,8 +3,8 @@
     <!-- 顶部头部 -->
     <div class="header">
       <div class="logo-section">
-        <img class="logo" src="../assets/logo.svg" alt="RikkaNas Logo">
-        <h1>RikkaNas 控制面板</h1>
+        <img class="logo" src="../assets/RikaOS.png" alt="RikkaNas Logo">
+        <h1>Rika OS 控制面板</h1>
       </div>
       <div class="user-info">
 <!--        <div class="user-avatar">{{ userInitial }}</div>-->
@@ -15,9 +15,14 @@
 
     <!-- 系统状态概览 -->
     <div class="stats-grid">
+
+<!--      <div class="stat-card" v-for="stat in stats" :key="stat.label">-->
+<!--        <div class="stat-value">{{ stat.value }}</div>-->
+<!--        <div class="stat-label">{{ stat.label }}</div>-->
+<!--      </div>-->
       <div class="stat-card" v-for="stat in stats" :key="stat.label">
-        <div class="stat-value">{{ stat.value }}</div>
-        <div class="stat-label">{{ stat.label }}</div>
+        <div class="state-label">{{ stat.label }}</div>
+        <div class="state-value">{{ stat.value }}</div>
       </div>
     </div>
 
@@ -60,7 +65,7 @@ const fetchAdminInfo = async () => {
   } catch (error) {
     console.error('获取管理员信息失败:', error);
     // 可以在这里设置一个默认值或者处理错误
-    userName.value = 'Guest';
+    userName.value = 'User';
   }
   return userName.value;
 };
@@ -71,12 +76,14 @@ onMounted(() => {
 const userInitial = computed(() => userName.value.charAt(0))
 
 // 系统统计数据
+
+// 初始化 stats
 const stats = ref([
-  { value: '2.5TB', label: '总存储空间' },
-  { value: '1.2TB', label: '已使用空间' },
-  { value: '48%', label: '使用率' },
-  { value: '在线', label: '系统状态' }
-])
+  { value: '加载中...', label: '总存储空间' },
+  { value: '加载中...', label: '已使用空间' },
+  { value: '加载中...', label: '使用率' },
+  { value: '加载中...', label: '系统状态' }
+]);
 
 // 菜单项配置（可扩展）
 const menuItems = ref([
@@ -105,7 +112,7 @@ const navigateTo = (route) => {
 // 快捷操作方法
 const quickAction = (action) => {
   const actions = {
-    upload: () => alert('开始快速上传...'),
+    upload: () => router.push('/fileuploader'),
     backup: () => alert('启动立即备份...'),
     scan: () => alert('开始病毒扫描...'),
     refresh: () => location.reload()
@@ -116,10 +123,28 @@ const quickAction = (action) => {
 // 登出方法
 const handleLogout = () => {
   if (confirm('确定要登出吗？')) {
-    // 调用登出API，清除token等
+    // 调用登出API，清除token
     router.push('/login')
   }
 }
+
+onMounted(async () => {
+  try {
+    const response = await axios.get('/api/system/stats'); // 后端接口地址
+    if (response.data.code === 200) {
+      stats.value = response.data.data; // 赋值系统数据
+    }
+  } catch (error) {
+    console.error('调用系统信息接口失败：', error);
+    // 接口失败时，可保留默认值或提示错误
+    stats.value = [
+      { value: '获取失败', label: '总存储空间' },
+      { value: '获取失败', label: '已使用空间' },
+      { value: '获取失败', label: '使用率' },
+      { value: '异常', label: '系统状态' }
+    ];
+  }
+});
 </script>
 
 <style scoped>

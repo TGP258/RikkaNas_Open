@@ -4,6 +4,7 @@ import Login from '@/views/Login.vue'  // 登录页面
 import Desktop from "@/views/Desktop.vue"; //桌面菜单
 // 导入你的INI配置编辑器组件
 import IniConfigEditor from '@/components/IniConfigEditor.vue';
+import FileUploader from "@/components/FileUploader.vue";
 
 const routes = [
     {
@@ -26,9 +27,18 @@ const routes = [
         name: 'IniConfigEditor', // 路由名称（唯一标识，用于编程式导航）
         component: IniConfigEditor, // 映射到INI编辑器组件
         meta: {
-            title: '个性化配置编辑器' // 可选：页面标题，可全局拦截设置
+            title: '系统设置' // 可选：页面标题，可全局拦截设置
+        }
+    },
+    {
+        path: '/fileuploader', // INI编辑器的路由路径（可自定义，如 /config/edit 等）
+        name: 'FileUploader', // 路由名称（唯一标识，用于编程式导航）
+        component: FileUploader, // 映射到INI编辑器组件
+        meta: {
+            title: '文件上传' // 可选：页面标题，可全局拦截设置
         }
     }
+
     // 可以继续添加更多路由
 ]
 
