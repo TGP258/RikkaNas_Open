@@ -4,7 +4,7 @@
       <div class="footer-info">
         <span>© 2026 RkCloud 本地网盘系统</span>
         <span class="separator">|</span>
-        <span>版本：v1.0.0</span>
+        <span>版本：Beta1.0.8</span>
       </div>
       <div class="footer-extra">
         <span>本地部署版 | 基于Vue + Node.js开发</span>

@@ -5,6 +5,7 @@ import Desktop from "@/views/Desktop.vue"; //桌面菜单
 // 导入你的INI配置编辑器组件
 import IniConfigEditor from '@/components/IniConfigEditor.vue';
 import FileUploader from "@/components/FileUploader.vue";
+import FileManager from "@/views/FileManager.vue";
 
 const routes = [
     {
@@ -37,6 +38,12 @@ const routes = [
         meta: {
             title: '文件上传' // 可选：页面标题，可全局拦截设置
         }
+    },
+    {
+        path: '/file-manager',
+        name: 'FileManager',
+        component: FileManager,
+        meta: { requiresAuth: true } // 可选：需要登录才能访问
     }
 
     // 可以继续添加更多路由

@@ -5,11 +5,19 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg'); // 从 'pg' 库中导入 Pool
-
+const fileRoutes = require('./routes/fileRoutes'); // 文件管理器
+const fileUtils = require('./utils/fileUtils'); // 文件管理器
 const app = express();
 app.use(cors());
 app.use(express.json());
-// app.use(express.json());
+
+// 初始化storage目录（启动时执行）
+fileUtils.initStorage().catch(err => console.error('Storage初始化失败：', err)); // 新增
+
+// 注册路由
+app.use('/api/ini', iniRoutes);
+app.use('/api/files', fileRoutes); // 新增文件管理路由
+
 // 此处可配置跨域（开发环境）
 // 跨域中间件
 app.use((req, res, next) => {
@@ -162,7 +170,7 @@ app.post('/api/login', (req, res) => {
         //         account: user.account
         //     }
         // });
-        
+
         //优化版本
         res.status(200).json({
             success: true, // 新增：前端可通过success快速判断是否登录成功
@@ -206,7 +214,7 @@ app.get('/api/admin/info', async (req, res) => {
         res.status(500).json({ error: '服务器错误' });
     }
 });
-const system = require('./system'); // 路径：和 server.js 同级，直接写文件名
+const system = require('./utils/system'); // 路径：和 server.js 同级，直接写文件名
 // 注册路由，统一添加前缀 /api/system（接口完整路径变为 /api/system/stats）
 app.use('/api/system', system);
 console.log('系统服务：监控 已启动')
