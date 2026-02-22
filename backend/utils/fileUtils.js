@@ -191,6 +191,56 @@ let clipboard = {
   path: '',
 };
 
+// ===== 新增：创建文件夹 =====
+const createFolder = async (folderName, relativePath = '') => {
+    const fullDir = safePath(relativePath);
+    const fullPath = path.join(fullDir, folderName);
+    try {
+        // 检查文件夹是否已存在
+        if (fsSync.existsSync(fullPath)) {
+            throw new Error('文件夹已存在');
+        }
+        await fs.mkdir(fullPath, { recursive: true });
+        return {
+            name: folderName,
+            path: path.relative(STORAGE_ROOT, fullPath)
+        };
+    } catch (error) {
+        console.error('创建文件夹失败：', error);
+        throw error;
+    }
+};
+
+
+// ===== 新增：递归上传文件夹（处理前端上传的文件夹） =====
+const uploadFolder = async (files, relativePath = '') => {
+    const results = [];
+    for (const file of files) {
+        // 1. 核心修复：获取文件夹上传时的相对路径（如 "test/1.txt"、"test/sub/2.jpg"）
+        const fileRelativePath = file.webkitRelativePath || file.originalname;
+        // 2. 拼接目标路径：当前上传目录 + 文件夹内的相对路径
+        const targetRelativePath = path.join(relativePath, fileRelativePath);
+        // 3. 安全检查路径（防止越权）
+        const fullFilePath = safePath(targetRelativePath);
+        // 4. 获取文件所在目录（确保目录存在）
+        const dirPath = path.dirname(fullFilePath);
+
+        // 5. 递归创建目录（关键：保留层级结构）
+        if (!fsSync.existsSync(dirPath)) {
+            await fs.mkdir(dirPath, { recursive: true });
+        }
+
+        // 6. 写入文件（保留原目录结构）
+        await fs.writeFile(fullFilePath, file.buffer);
+        results.push({
+            name: path.basename(fullFilePath),
+            path: path.relative(STORAGE_ROOT, fullFilePath)
+        });
+    }
+    return results;
+};
+
+
 // 11. 设置剪贴板
 const setClipboard = (type, path) => {
   clipboard = { type, path };
@@ -213,4 +263,6 @@ module.exports = {
   setClipboard,
   getClipboard,
   safePath,
+  createFolder,
+  uploadFolder
 };

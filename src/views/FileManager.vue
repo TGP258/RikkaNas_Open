@@ -21,14 +21,48 @@
         <button v-if="isSearching" @click="resetSearch">重置</button>
       </div>
 
-      <!-- 上传按钮 -->
-      <input
-          type="file"
-          ref="fileInput"
-          style="display: none"
-          @change="handleFileUpload"
-      />
-      <button class="btn" @click="$refs.fileInput.click()">上传文件</button>
+      <!-- 操作按钮组 -->
+      <div class="toolbar-actions">
+        <!-- 创建文件夹按钮 -->
+        <button class="btn" @click="showCreateFolderModal = true">
+          创建文件夹
+        </button>
+
+        <!-- 上传下拉按钮 -->
+        <div class="dropdown" @click.stop>
+          <button class="btn dropdown-btn" @click="toggleUploadMenu">
+            上传 <span class="arrow">▼</span>
+          </button>
+          <!-- 上传下拉菜单 -->
+          <div v-if="showUploadMenu" class="dropdown-menu">
+            <!-- 上传文件（无webkitdirectory） -->
+            <div class="menu-item" @click="triggerFileInput">
+              <!-- 关键1：绑定正确的ref变量 -->
+              <input
+                  type="file"
+                  ref="fileInputRef"
+                  style="display: none"
+                  @change="handleFileUpload"
+                  multiple
+              />
+              上传文件
+            </div>
+            <!-- 上传文件夹（保留webkitdirectory） -->
+            <div class="menu-item" @click="triggerFolderInput">
+              <!-- 关键1：绑定正确的ref变量 -->
+              <input
+                  type="file"
+                  ref="folderInputRef"
+                  style="display: none"
+                  @change="handleFolderUpload"
+                  webkitdirectory
+                  directory
+              />
+              上传文件夹
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 文件列表 -->
@@ -91,6 +125,22 @@
       </div>
     </div>
 
+    <!-- 创建文件夹弹窗 -->
+    <div v-if="showCreateFolderModal" class="modal">
+      <div class="modal-content">
+        <h3>创建文件夹</h3>
+        <input
+            v-model="newFolderName"
+            placeholder="请输入文件夹名称"
+            @keyup.enter="confirmCreateFolder"
+        />
+        <div class="modal-btns">
+          <button @click="confirmCreateFolder">确认创建</button>
+          <button @click="showCreateFolderModal = false">取消</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 提示框 -->
     <div v-if="toast.visible" class="toast" :class="toast.type">
       {{ toast.message }}
@@ -102,7 +152,8 @@
 import { ref, reactive, onMounted, watch } from 'vue';
 import {
   getFileList, uploadFile, downloadFile, deleteFile,
-  renameFile, setClipboard, pasteFile, searchFiles
+  renameFile, setClipboard, pasteFile, searchFiles,
+  createFolder
 } from '@/api/fileApi';
 
 // 状态管理
@@ -114,7 +165,14 @@ const isSearching = ref(false); // 是否在搜索状态
 const contextMenu = ref({ visible: false, x: 0, y: 0, file: null }); // 右键菜单
 const renameVisible = ref(false); // 重命名弹窗
 const newFileName = ref(''); // 新文件名
+const showCreateFolderModal = ref(false); // 创建文件夹弹窗
+const newFolderName = ref(''); // 新文件夹名称
 const toast = ref({ visible: false, message: '', type: 'success' }); // 提示框
+const showUploadMenu = ref(false); // 控制上传下拉菜单显示
+
+// 关键2：声明ref变量（Vue3 script setup 必须这样用）
+const fileInputRef = ref(null); // 文件输入框引用
+const folderInputRef = ref(null); // 文件夹输入框引用
 
 // 格式化文件大小
 const formatSize = (bytes) => {
@@ -151,26 +209,65 @@ const navigateTo = (path) => {
 // 双击文件/文件夹
 const handleItemDblClick = (file) => {
   if (file.type === 'folder') {
-    // 进入文件夹
     navigateTo(file.path);
   } else {
-    // 下载文件
     downloadFile(file.path);
   }
 };
 
-// 文件上传
+// 下拉菜单切换逻辑
+const toggleUploadMenu = () => {
+  showUploadMenu.value = !showUploadMenu.value;
+};
+
+// 关键3：修复文件输入框触发逻辑（使用声明的ref变量）
+const triggerFileInput = () => {
+  // 先判断ref是否存在，避免报错
+  if (fileInputRef.value) {
+    fileInputRef.value.click();
+    showUploadMenu.value = false; // 点击后关闭菜单
+  }
+};
+
+// 关键4：修复文件夹输入框触发逻辑（使用声明的ref变量）
+const triggerFolderInput = () => {
+  if (folderInputRef.value) {
+    folderInputRef.value.click();
+    showUploadMenu.value = false; // 点击后关闭菜单
+  }
+};
+
+// 上传文件（仅文件，无目录）
 const handleFileUpload = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  uploadFile(file, currentPath.value)
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+
+  uploadFile(files, currentPath.value)
       .then(() => {
-        showToast('上传成功');
+        showToast(`成功上传 ${files.length} 个文件`);
         loadFileList(currentPath.value);
-        e.target.value = ''; // 清空文件选择
+        e.target.value = '';
       })
       .catch(error => {
-        showToast(error.response?.data?.error || '上传失败', 'error');
+        showToast(error.response?.data?.error || '文件上传失败', 'error');
+      });
+};
+
+// 上传文件夹（保留目录结构）
+const handleFolderUpload = (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+
+  uploadFile(files, currentPath.value)
+      .then(() => {
+        // 统计上传的根文件夹数量（去重）
+        const rootFolders = new Set(files.map(f => f.webkitRelativePath.split('/')[0]));
+        showToast(`成功上传 ${rootFolders.size} 个文件夹（共 ${files.length} 个文件）`);
+        loadFileList(currentPath.value);
+        e.target.value = '';
+      })
+      .catch(error => {
+        showToast(error.response?.data?.error || '文件夹上传失败', 'error');
       });
 };
 
@@ -197,14 +294,13 @@ const resetSearch = () => {
 
 // 显示右键菜单
 const showContextMenu = (e, file) => {
-  e.preventDefault(); // 阻止默认右键菜单
+  e.preventDefault();
   contextMenu.value = {
     visible: true,
     x: e.clientX,
     y: e.clientY,
     file,
   };
-  // 点击其他区域关闭菜单
   document.addEventListener('click', closeContextMenu, { once: true });
 };
 
@@ -293,6 +389,25 @@ const handleDelete = () => {
       });
 };
 
+// 确认创建文件夹
+const confirmCreateFolder = async () => {
+  if (!newFolderName.value.trim()) {
+    showToast('文件夹名称不能为空', 'error');
+    return;
+  }
+  try {
+    const res = await createFolder(newFolderName.value, currentPath.value);
+    if (res.data.success) {
+      showToast('文件夹创建成功');
+      loadFileList(currentPath.value);
+      showCreateFolderModal.value = false;
+      newFolderName.value = '';
+    }
+  } catch (error) {
+    showToast(error.response?.data?.error || '创建文件夹失败', 'error');
+  }
+};
+
 // 显示提示框
 const showToast = (message, type = 'success') => {
   toast.value = { visible: true, message, type };
@@ -301,9 +416,13 @@ const showToast = (message, type = 'success') => {
   }, 2000);
 };
 
-// 初始化
+// 合并后的onMounted
 onMounted(() => {
   loadFileList();
+  // 点击页面其他区域关闭下拉菜单
+  document.addEventListener('click', () => {
+    showUploadMenu.value = false;
+  });
 });
 
 // 监听路径变化
@@ -320,6 +439,7 @@ watch(currentPath, () => {
   flex-direction: column;
   padding: 20px;
   box-sizing: border-box;
+  background-color: #f9f9f9;
 }
 
 .toolbar {
@@ -327,12 +447,15 @@ watch(currentPath, () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  padding: 10px 15px;
+  background-color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .path-nav {
   font-size: 16px;
+  color: #333;
 }
 
 .path-nav span {
@@ -350,18 +473,27 @@ watch(currentPath, () => {
 }
 
 .search-box input {
-  padding: 5px 10px;
+  padding: 6px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  font-size: 14px;
+  width: 200px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .btn {
-  padding: 6px 12px;
+  padding: 6px 16px;
   background: #1989fa;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
 }
 
 .btn:hover {
@@ -371,37 +503,42 @@ watch(currentPath, () => {
 .file-list {
   flex: 1;
   overflow: auto;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  background-color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-bottom: 1px solid #f5f5f5;
   cursor: default;
+  transition: background 0.2s;
 }
 
 .file-item:hover {
-  background: #f5f5f5;
+  background: #f5f8ff;
 }
 
 .file-icon {
   width: 30px;
   text-align: center;
   font-size: 20px;
+  margin-right: 10px;
 }
 
 .file-name {
   flex: 1;
-  margin: 0 16px;
+  font-size: 14px;
+  color: #333;
 }
 
 .file-meta {
   width: 120px;
   text-align: right;
   color: #666;
+  font-size: 13px;
 }
 
 .file-time {
@@ -413,8 +550,9 @@ watch(currentPath, () => {
 
 .empty-tip {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
   color: #999;
+  font-size: 14px;
 }
 
 .context-menu {
@@ -423,13 +561,15 @@ watch(currentPath, () => {
   background: white;
   border: 1px solid #eee;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   z-index: 1000;
 }
 
 .menu-item {
   padding: 8px 16px;
   cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
 }
 
 .menu-item:hover {
@@ -455,18 +595,26 @@ watch(currentPath, () => {
 
 .modal-content {
   background: white;
-  padding: 20px;
-  border-radius: 4px;
-  width: 300px;
+  padding: 25px;
+  border-radius: 6px;
+  width: 320px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+
+.modal-content h3 {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  color: #333;
 }
 
 .modal-content input {
   width: 100%;
-  padding: 8px;
-  margin: 16px 0;
+  padding: 10px;
+  margin: 0 0 20px 0;
   border: 1px solid #ddd;
   border-radius: 4px;
   box-sizing: border-box;
+  font-size: 14px;
 }
 
 .modal-btns {
@@ -475,15 +623,35 @@ watch(currentPath, () => {
   gap: 10px;
 }
 
+.modal-btns button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-btns button:first-child {
+  background: #1989fa;
+  color: white;
+}
+
+.modal-btns button:last-child {
+  background: #f5f5f5;
+  color: #666;
+}
+
 .toast {
   position: fixed;
-  top: 20px;
+  top: 30px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 4px;
   color: white;
+  font-size: 14px;
   z-index: 1002;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
 }
 
 .toast.success {
@@ -492,5 +660,40 @@ watch(currentPath, () => {
 
 .toast.error {
   background: #f56c6c;
+}
+
+/* 下拉菜单样式 */
+.dropdown {
+  position: relative;
+  display: inline-block;
+  z-index: 101;
+}
+.dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.arrow {
+  font-size: 10px;
+}
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 102;
+  min-width: 120px;
+  margin-top: 2px;
+}
+.dropdown-menu .menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.dropdown-menu .menu-item:hover {
+  background: #f5f8ff;
 }
 </style>

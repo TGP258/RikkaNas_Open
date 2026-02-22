@@ -18,16 +18,54 @@ router.get('/list', async (req, res) => {
 });
 
 // 2. 文件上传
-router.post('/upload', upload.single('file'), async (req, res) => {
+// router.post('/upload', upload.single('file'), async (req, res) => {
+//     try {
+//         if (!req.file) {
+//             return res.status(400).json({ success: false, error: '请选择要上传的文件' });
+//         }
+//         const { path = '' } = req.body;
+//         const result = await fileUtils.uploadFile(req.file, path);
+//         res.json({ success: true, data: result });
+//     } catch (error) {
+//         res.status(500).json({ success: false, error: error.message });
+//     }
+// });
+// ===== 升级：文件上传接口（支持文件夹上传） =====
+// 修改原有 upload.single 为 upload.array，支持多文件/文件夹上传
+router.post('/upload', upload.any(), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: '请选择要上传的文件' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: '请选择要上传的文件/文件夹'
+            });
         }
         const { path = '' } = req.body;
-        const result = await fileUtils.uploadFile(req.file, path);
-        res.json({ success: true, data: result });
+
+        let result = [];
+        // 判断是否是文件夹上传（通过 webkitRelativePath 判断）
+        const isFolderUpload = req.files.some(file => file.webkitRelativePath);
+        if (isFolderUpload) {
+            // 处理文件夹上传
+            result = await fileUtils.uploadFolder(req.files, path);
+        } else {
+            // 处理单个/多个文件上传
+            for (const file of req.files) {
+                const fileResult = await fileUtils.uploadFile(file, path);
+                result.push(fileResult);
+            }
+        }
+
+        res.json({
+            success: true,
+            data: result,
+            message: `成功上传 ${result.length} 个文件/文件夹`
+        });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 
@@ -114,4 +152,27 @@ router.get('/search', async (req, res) => {
     }
 });
 
+// ===== 新增：创建文件夹接口 =====
+router.post('/create-folder', async (req, res) => {
+    try {
+        const { folderName, path = '' } = req.body;
+        if (!folderName) {
+            return res.status(400).json({
+                success: false,
+                error: '文件夹名称不能为空'
+            });
+        }
+        const result = await fileUtils.createFolder(folderName, path);
+        res.json({
+            success: true,
+            data: result,
+            message: '文件夹创建成功'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 module.exports = router;
