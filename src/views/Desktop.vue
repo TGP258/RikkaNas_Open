@@ -3,8 +3,8 @@
     <!-- 顶部头部 -->
     <div class="header">
       <div class="logo-section">
-        <img class="logo" src="../assets/RikaOS.png" alt="RikkaNas Logo">
-        <h1>Rika OS 控制面板</h1>
+        <img class="logo" src="../assets/RkCloudLOGO.png" alt="RikkaNas Logo" width="256" height="256" style="place-items: center">
+        <h1>RkCloud控制面板</h1>
       </div>
       <div class="user-info">
 <!--        <div class="user-avatar">{{ userInitial }}</div>-->
@@ -46,6 +46,7 @@
         {{ action.icon }} {{ action.label }}
       </button>
     </div>
+    <AppFooter></AppFooter>
   </div>
 </template>
 
@@ -53,6 +54,8 @@
 import axios from 'axios';
 import {ref, computed, onMounted} from 'vue'
 import { useRouter } from 'vue-router'
+// 导入页脚组件
+import AppFooter from '../components/AppFooter.vue';
 
 const router = useRouter()
 const userName = ref(''); // 初始化为空字符串，而不是'管理员'
@@ -72,6 +75,8 @@ const fetchAdminInfo = async () => {
 onMounted(() => {
   fetchAdminInfo();
 });
+
+
 // 用户头像首字母
 const userInitial = computed(() => userName.value.charAt(0))
 

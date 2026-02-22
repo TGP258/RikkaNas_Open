@@ -69,7 +69,7 @@
     <div class="action-area">
       <button @click="refreshIniConfig" class="btn refresh-btn">刷新配置（从服务器读取）</button>
       <button @click="saveIniConfig" class="btn save-btn" :disabled="configStore.isLoading">保存配置到服务器</button>
-      <button @click="resetEditor" class="btn reset-btn">重置编辑器</button>
+<!--      <button @click="resetEditor" class="btn reset-btn">重置编辑器</button>-->
     </div>
   </div>
 </template>

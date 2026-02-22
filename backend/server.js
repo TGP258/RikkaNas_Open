@@ -62,6 +62,31 @@ db.connect((err) => {
         }
     });
 });
+//检查是否是新用户
+app.get('/api/check-has-users', (req, res) => {
+    // 查询用户表的记录数
+    const query = 'SELECT COUNT(*) AS userCount FROM users';
+    console.log('已检查用户信息');
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('查询用户数量失败:', err);
+            return res.status(500).json({
+                success: false,
+                error: '数据库查询错误'
+            });
+        }
+
+        // 提取用户数量，判断是否有已注册用户
+        const userCount = results[0].userCount;
+        const hasUsers = userCount > 0;
+
+        res.status(200).json({
+            success: true,
+            hasUsers: hasUsers, // true=有用户，false=无用户
+            userCount: userCount // 可选：返回用户数量，便于调试
+        });
+    });
+});
 
 // 注册接口
 app.post('/api/register', async (req, res) => {
@@ -128,21 +153,37 @@ app.post('/api/login', (req, res) => {
             return res.status(401).json({ error: '密码不正确' });
         }
 
-        res.json({
+        // res.json({
+        //     message: '登录成功',
+        //     user: {
+        //         id: user.id,
+        //         username: user.username,
+        //         device_name: user.device_name,
+        //         account: user.account
+        //     }
+        // });
+        
+        //优化版本
+        res.status(200).json({
+            success: true, // 新增：前端可通过success快速判断是否登录成功
             message: '登录成功',
-            user: {
-                id: user.id,
-                username: user.username,
-                device_name: user.device_name,
-                account: user.account
+            data: { // 统一用data包裹用户信息，符合RESTful规范
+                user: {
+                    id: user.id,
+                    username: user.username, // 核心：传回用户名
+                    device_name: user.device_name,
+                    account: user.account,
+                    userrole: user.userrole // 可选：如果需要展示角色，也一并返回
+                }
             }
         });
+
     });
 });
 app.get('/api/admin/info', async (req, res) => {
     try {
         // 使用 MySQL 的参数占位符 '?'
-        const queryText = "SELECT username FROM users WHERE userrole = 1";
+        const queryText = "SELECT username FROM users";
 
         // 使用 db.query 方法执行查询
         db.query(queryText, [1], (err, results) => {

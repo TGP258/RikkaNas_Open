@@ -6,10 +6,10 @@ import TheWelcome from '../components/TheWelcome.vue'
 
 <template>
   <header>
-    <img alt="RikkaNas logo" class="logo" src="../assets/RikaOS%20LOGO.png" width="125" height="125" style="place-items: center" />
+    <img alt="RikkaNas logo" class="logo" src="../assets/RkCloudLOGO.png" width="256" height="256" style="place-items: center" />
 
     <div class="wrapper">
-      <HelloWorld msg="欢迎使用RikaOS！" />
+      <HelloWorld msg="欢迎使用RkCloud！" />
     </div>
   </header>
   <main>
