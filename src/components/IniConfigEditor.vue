@@ -414,4 +414,249 @@ onMounted(() => {
 .reset-btn:hover {
   background-color: #546e7a;
 }
+
+/* 引入Material Design字体和图标（在index.html或main.js中添加） */
+/* <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> */
+/* <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> */
+
+.ini-editor-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 24px;
+  font-family: 'Roboto', sans-serif; /* Material Design推荐字体 */
+  background: #F3E5F5; /* 浅紫背景 */
+  border-radius: 16px; /* Material圆角 */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Material阴影 */
+  color: #333;
+}
+
+h2 {
+  text-align: center;
+  color: #6200EE; /* 主紫色 */
+  font-size: 28px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px; /* Material字间距 */
+}
+
+.tip {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  text-align: center;
+  font-weight: 400;
+  animation: fadeIn 0.3s ease-out; /* Material动画 */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.loading-tip {
+  background: #E8EAF6; /* 浅紫提示 */
+  color: #6200EE;
+  border-left: 4px solid #6200EE;
+}
+
+.error-tip {
+  background: #FFEBEE; /* 错误用红色，但保持紫色主题一致 */
+  color: #D32F2F;
+  border-left: 4px solid #D32F2F;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px; /* Material按钮圆角 */
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Material过渡曲线 */
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Elevated button阴影 */
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px; /* Ripple effect模拟 */
+}
+
+.btn:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.refresh-btn {
+  background: #6200EE; /* 主紫色 */
+  color: white;
+}
+
+.refresh-btn::after {
+  content: 'refresh'; /* Material Icon */
+  font-family: 'Material Icons';
+  font-size: 18px;
+}
+
+.save-btn {
+  background: #BB86FC; /* 辅助紫色 */
+  color: #333;
+}
+
+.save-btn::after {
+  content: 'save';
+  font-family: 'Material Icons';
+  font-size: 18px;
+}
+
+.save-btn:disabled {
+  background: #E0E0E0;
+  color: #9E9E9E;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.add-section-btn, .add-kv-btn {
+  background: #9C27B0; /* 深紫 */
+  color: white;
+}
+
+.add-section-btn::after {
+  content: 'add';
+  font-family: 'Material Icons';
+  font-size: 16px;
+}
+
+.add-kv-btn::after {
+  content: 'add';
+  font-family: 'Material Icons';
+  font-size: 14px;
+}
+
+.delete-btn, .delete-kv-btn {
+  background: #F44336; /* 红色，用于删除 */
+  color: white;
+}
+
+.delete-btn::after {
+  content: 'delete';
+  font-family: 'Material Icons';
+  font-size: 16px;
+}
+
+.delete-btn:disabled {
+  background: #E0E0E0;
+  cursor: not-allowed;
+}
+
+.edit-area {
+  margin-bottom: 32px;
+}
+
+.section-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Material卡片阴影 */
+  border: 1px solid #E0E0E0;
+  transition: box-shadow 0.2s ease;
+}
+
+.section-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.section-name-input {
+  padding: 12px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  width: 250px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.section-name-input:focus {
+  border-color: #6200EE;
+  box-shadow: 0 0 0 3px rgba(98, 0, 238, 0.1); /* Material焦点环 */
+}
+
+.key-value-list {
+  margin-bottom: 20px;
+}
+
+.key-value-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+  padding: 12px;
+  background: #FAFAFA;
+  border-radius: 8px;
+  border: 1px solid #F0F0F0;
+}
+
+.key-input, .value-input {
+  padding: 12px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.key-input {
+  width: 160px;
+}
+
+.value-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.key-input:focus, .value-input:focus {
+  border-color: #6200EE;
+  box-shadow: 0 0 0 3px rgba(98, 0, 238, 0.1);
+}
+
+.equal-sign {
+  font-size: 18px;
+  color: #666;
+  font-weight: 500;
+}
+
+.action-area {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+}
 </style>

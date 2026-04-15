@@ -1,57 +1,158 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'  // 首页
-import Login from '@/views/Login.vue'  // 登录页面
-import Desktop from "@/views/Desktop.vue"; //桌面菜单
-// 导入你的INI配置编辑器组件
-import IniConfigEditor from '@/components/IniConfigEditor.vue';
-import FileUploader from "@/components/FileUploader.vue";
-import FileManager from "@/views/FileManager.vue";
+// import { createRouter, createWebHistory } from 'vue-router'
+// import Home from '../views/Home.vue'  // 首页
+// import Login from '@/views/Login.vue'  // 登录页面
+// import Desktop from "@/views/Desktop.vue"; //桌面菜单
+// // 导入你的INI配置编辑器组件
+// import IniConfigEditor from '@/components/IniConfigEditor.vue';
+// import FileUploader from "@/components/FileUploader.vue";
+// import FileManager from "@/views/FileManager.vue";
+//
+// const routes = [
+//     {
+//         path: '/',
+//         name: 'Home',
+//         component: Home
+//     },
+//     {
+//         path: '/login',
+//         name: 'Login',
+//         component: Login
+//     },
+//     {
+//         path: '/desktop',
+//         name: 'Desktop',
+//         component: Desktop
+//     },
+//     {
+//         path: '/ini-editor', // INI编辑器的路由路径（可自定义，如 /config/edit 等）
+//         name: 'IniConfigEditor', // 路由名称（唯一标识，用于编程式导航）
+//         component: IniConfigEditor, // 映射到INI编辑器组件
+//         meta: {
+//             title: '系统设置' // 可选：页面标题，可全局拦截设置
+//         }
+//     },
+//     {
+//         path: '/fileuploader', // INI编辑器的路由路径（可自定义，如 /config/edit 等）
+//         name: 'FileUploader', // 路由名称（唯一标识，用于编程式导航）
+//         component: FileUploader, // 映射到INI编辑器组件
+//         meta: {
+//             title: '文件上传' // 可选：页面标题，可全局拦截设置
+//         }
+//     },
+//     {
+//         path: '/file-manager',
+//         name: 'FileManager',
+//         component: FileManager,
+//         meta: { requiresAuth: true } // 可选：需要登录才能访问
+//     }
+//
+//     // 可以继续添加更多路由
+// ]
+//
+// const router = createRouter({
+//     history: createWebHistory(),
+//     routes
+// })
+//
+// export default router
+//
+// // src/router/index.js
+// import { createRouter, createWebHistory } from 'vue-router';
+// import Home from '@/views/Home.vue'; // 示例现有视图
+// import Desktop from '@/views/Desktop.vue'; // 示例现有视图
+// import SystemSettings from '@/components/SystemSettings.vue'; // 新增导入
+//
+// const routes = [
+//   {
+//     path: '/',
+//     name: 'Home',
+//     component: Home,
+//   },
+//   {
+//     path: '/desktop',
+//     name: 'Desktop',
+//     component: Desktop,
+//   },
+//   // 新增系统设置路由
+//   {
+//     path: '/settings',
+//     name: 'SystemSettings',
+//     component: SystemSettings,
+//   },
+//   // 如果有其他路由，继续添加...
+// ];
+//
+// const router = createRouter({
+//   history: createWebHistory(),
+//   routes,
+// });
+//
+// export default router;
 
-const routes = [
-    {
-        path: '/',
-        name: 'Home',
-        component: Home
-    },
-    {
-        path: '/login',
-        name: 'Login',
-        component: Login
-    },
-    {
-        path: '/desktop',
-        name: 'Desktop',
-        component: Desktop
-    },
-    {
-        path: '/ini-editor', // INI编辑器的路由路径（可自定义，如 /config/edit 等）
-        name: 'IniConfigEditor', // 路由名称（唯一标识，用于编程式导航）
-        component: IniConfigEditor, // 映射到INI编辑器组件
-        meta: {
-            title: '系统设置' // 可选：页面标题，可全局拦截设置
-        }
-    },
-    {
-        path: '/fileuploader', // INI编辑器的路由路径（可自定义，如 /config/edit 等）
-        name: 'FileUploader', // 路由名称（唯一标识，用于编程式导航）
-        component: FileUploader, // 映射到INI编辑器组件
-        meta: {
-            title: '文件上传' // 可选：页面标题，可全局拦截设置
-        }
-    },
-    {
-        path: '/file-manager',
-        name: 'FileManager',
-        component: FileManager,
-        meta: { requiresAuth: true } // 可选：需要登录才能访问
-    }
+   import { createRouter, createWebHistory } from 'vue-router'
+   import Home from '../views/Home.vue'  // 首页
+   import Login from '@/views/Login.vue'  // 登录页面
+   import Desktop from "@/views/Desktop.vue"; //桌面菜单
+   // 导入你的INI配置编辑器组件
+   import IniConfigEditor from '@/components/IniConfigEditor.vue';
+   import FileUploader from "@/components/FileUploader.vue";
+   import FileManager from "@/views/FileManager.vue";
+   // 新增SystemSettings导入
+   import SystemSettings from '@/components/SystemSettings.vue';
 
-    // 可以继续添加更多路由
-]
+   const routes = [
+       {
+           path: '/',
+           name: 'Home',
+           component: Home
+       },
+       {
+           path: '/login',
+           name: 'Login',
+           component: Login
+       },
+       {
+           path: '/desktop',
+           name: 'Desktop',
+           component: Desktop
+       },
+       {
+           path: '/ini-editor', // INI编辑器的路由路径（可自定义，如 /config/edit 等）
+           name: 'IniConfigEditor', // 路由名称（唯一标识，用于编程式导航）
+           component: IniConfigEditor, // 映射到INI编辑器组件
+           meta: {
+               title: '系统设置' // 可选：页面标题，可全局拦截设置
+           }
+       },
+       {
+           path: '/fileuploader', // 文件上传路由
+           name: 'FileUploader', // 路由名称
+           component: FileUploader, // 映射到文件上传组件
+           meta: {
+               title: '文件上传' // 可选：页面标题
+           }
+       },
+       {
+           path: '/file-manager',
+           name: 'FileManager',
+           component: FileManager,
+           meta: { requiresAuth: true } // 可选：需要登录才能访问
+       },
+       // 新增系统设置路由
+       {
+           path: '/settings',
+           name: 'SystemSettings',
+           component: SystemSettings,
+           meta: {
+               title: '系统设置' // 可选：页面标题
+           }
+       }
+       // 可以继续添加更多路由
+   ]
 
-const router = createRouter({
-    history: createWebHistory(),
-    routes
-})
+   const router = createRouter({
+       history: createWebHistory(),
+       routes
+   })
 
-export default router
+   export default router
