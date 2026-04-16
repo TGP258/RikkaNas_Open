@@ -17,19 +17,29 @@
           <h3>{{ sectionName }}</h3>
           <div v-for="(value, key) in sectionData" :key="key" class="setting-item">
             <div class="setting-label">
-<!--              <span class="material-icons">{{ getIconForKey(key) }}</span>-->
               <span>{{ getLabelForKey(key) }}</span> <!-- 用户友好标签 -->
             </div>
             <div class="setting-control">
-              <!-- 所有项都显示开关 -->
-              <label class="switch">
+              <!-- 如果key是可编辑的，显示输入框 -->
+              <input
+                  v-if="isEditableKey(key)"
+                  type="text"
+                  :value="value"
+                  @blur="updateValue(sectionName, key, $event)"
+                  class="edit-input"
+                  placeholder="输入新值"
+              />
+              <!-- 否则，如果key不在排除列表中，显示开关 -->
+              <label v-else-if="!isNoSwitchKey(key)" class="switch">
                 <input
-                  type="checkbox"
-                  :checked="isOn(value)"
-                  @change="toggleSwitch(sectionName, key, $event)"
+                    type="checkbox"
+                    :checked="isOn(value)"
+                    @change="toggleSwitch(sectionName, key, $event)"
                 />
                 <span class="slider"></span>
               </label>
+              <!-- 否则显示值文本 -->
+              <span v-else class="value-text">{{ value }}</span>
             </div>
           </div>
         </div>
@@ -56,20 +66,25 @@ const configStore = useIniConfigStore();
 
 const message = ref('');
 
+// 不显示开关的key列表（自定义）
+const noSwitchKeys = ['app_name', 'version']; // 示例：这些key不显示开关，只显示值
+
+// 可直接编辑的key列表（自定义）
+const editableKeys = ['device_name']; // 示例：这些key显示输入框，可直接编辑
+
+// 判断是否为不显示开关的key
+const isNoSwitchKey = (key) => {
+  return noSwitchKeys.includes(key);
+};
+
+// 判断是否为可编辑的key
+const isEditableKey = (key) => {
+  return editableKeys.includes(key);
+};
+
 // 判断值是否为“开”（开关状态）
 const isOn = (value) => {
   return value === '开' || value === 'true'; // 支持旧格式兼容
-};
-
-// 获取图标（根据key动态）
-const getIconForKey = (key) => {
-  const iconMap = {
-    theme: 'palette',
-    language: 'language',
-    enabled: 'notifications',
-    // 添加更多映射
-  };
-  return iconMap[key] || 'settings'; // 默认图标
 };
 
 // 获取用户友好标签（映射INI键为中文）
@@ -78,9 +93,30 @@ const getLabelForKey = (key) => {
     theme: '深色模式',
     language: '中文界面',
     enabled: '启用通知',
-    // 添加更多映射，如 app_name: '应用名称'
+    app_name: '系统版本',
+    version: '版本号',
+    device_name:'设备名',
+    dark_mode:'深色模式',
+    // 添加更多映射
   };
   return labelMap[key] || key; // 默认使用原键
+};
+
+// 更新值（输入框失去焦点时）
+const updateValue = async (section, key, event) => {
+  const newValue = event.target.value.trim();
+  if (newValue !== configStore.iniData[section][key]) {
+    configStore.updateIniItem(section, key, newValue);
+    try {
+      await configStore.saveIniConfig();
+      const label = getLabelForKey(key);
+      message.value = `${label} 已更新为 ${newValue}`;
+      setTimeout(() => message.value = '', 3000);
+    } catch (error) {
+      message.value = `保存失败: ${error.message}`;
+      setTimeout(() => message.value = '', 3000);
+    }
+  }
 };
 
 // 切换开关（保存为“开”/“关”）
@@ -139,7 +175,6 @@ onMounted(async () => {
   }
 });
 </script>
-
 <style scoped>
 /* 基于Login.vue的风格 */
 .container {
@@ -384,4 +419,20 @@ input:checked + .slider:before {
     font-size: 1.5rem;
   }
 }
+
+/* 样式与之前相同，添加.edit-input样式 */
+.edit-input {
+  padding: 8px 12px;
+  border: 2px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.edit-input:focus {
+  border-color: #40007a;
+}
+
+/* 其余样式不变 */
 </style>
