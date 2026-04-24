@@ -66,25 +66,25 @@ const configStore = useIniConfigStore();
 
 const message = ref('');
 
-// 不显示开关的key列表（自定义）
-const noSwitchKeys = ['app_name', 'version']; // 示例：这些key不显示开关，只显示值
+// 键值显示
+const noSwitchKeys = ['app_name', 'version']; // 只显示值
 
-// 可直接编辑的key列表（自定义）
-const editableKeys = ['device_name']; // 示例：这些key显示输入框，可直接编辑
+// 可直接编辑的键值列表
+const editableKeys = ['device_name']; // 显示输入框，可直接编辑
 
-// 判断是否为不显示开关的key
+// 判断是否为键值显示
 const isNoSwitchKey = (key) => {
   return noSwitchKeys.includes(key);
 };
 
-// 判断是否为可编辑的key
+// 判断是否为可编辑的键值
 const isEditableKey = (key) => {
   return editableKeys.includes(key);
 };
 
 // 判断值是否为“开”（开关状态）
 const isOn = (value) => {
-  return value === '开' || value === 'true'; // 支持旧格式兼容
+  return value === '开' || value === 'true';
 };
 
 // 获取用户友好标签（映射INI键为中文）

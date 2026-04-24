@@ -156,33 +156,47 @@ const moveFile = async (sourceRelativePath, targetRelativePath) => {
   }
 };
 
-// 10. 搜索文件/文件夹
+// 10. 搜索文件/文件夹 【支持AI输出：jpg,png,gif】
 const searchFiles = async (keyword, relativePath = '') => {
-  const fullPath = safePath(relativePath);
-  try {
-    const files = await fs.readdir(fullPath, { withFileTypes: true });
-    const result = [];
-    for (const file of files) {
-      const filePath = path.join(fullPath, file.name);
-      if (file.name.includes(keyword)) {
-        const stats = await fs.stat(filePath);
-        result.push({
-          name: file.name,
-          type: file.isDirectory() ? 'folder' : 'file',
-          path: path.relative(STORAGE_ROOT, filePath),
-        });
-      }
-      // 递归搜索子文件夹
-      if (file.isDirectory()) {
-        const subResult = await searchFiles(keyword, path.relative(STORAGE_ROOT, filePath));
-        result.push(...subResult);
-      }
+    const fullPath = safePath(relativePath);
+    try {
+        const files = await fs.readdir(fullPath, { withFileTypes: true });
+        const result = [];
+
+        // 👇 只加了这一行：拆分逗号分隔的关键词
+        const keywordList = keyword.split(',').map(k => k.trim().toLowerCase());
+
+        for (const file of files) {
+            const filePath = path.join(fullPath, file.name);
+            const fileName = file.name.toLowerCase();
+
+            // 👇 修改匹配逻辑：支持多个关键词 + 后缀匹配
+            const isMatched = keywordList.some(key => {
+                if (fileName.includes(key.toLowerCase())) return true;
+                if (fileName.endsWith(`.${key.toLowerCase()}`)) return true;
+                return false;
+            });
+
+            if (isMatched) {
+                const stats = await fs.stat(filePath);
+                result.push({
+                    name: file.name,
+                    type: file.isDirectory() ? 'folder' : 'file',
+                    path: path.relative(STORAGE_ROOT, filePath),
+                });
+            }
+
+            // 递归搜索子文件夹（完全保留）
+            if (file.isDirectory()) {
+                const subResult = await searchFiles(keyword, path.relative(STORAGE_ROOT, filePath));
+                result.push(...subResult);
+            }
+        }
+        return result;
+    } catch (error) {
+        console.error('搜索失败：', error);
+        throw error;
     }
-    return result;
-  } catch (error) {
-    console.error('搜索失败：', error);
-    throw error;
-  }
 };
 
 // 临时存储剪切/复制的文件（内存中，重启失效，生产环境可改用数据库）

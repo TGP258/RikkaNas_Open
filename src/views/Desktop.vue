@@ -97,8 +97,8 @@ const menuItems = ref([
   { id: 3, icon: '💾', title: '硬盘管理', route: '/storage', description: '查看硬盘健康状态和RAID配置' },
   { id: 4, icon: '🖥️', title: '设备信息', route: '/device-info', description: '查看硬件信息和系统状态' },
   { id: 5, icon: '📦', title: '备份与同步', route: '/backup', description: '设置自动备份任务和云同步' },
-  { id: 6, icon: '📱', title: '应用中心', route: '/apps', description: '安装和管理NAS应用程序' },
-  { id: 7, icon: '🐟', title: 'Docker管理', route: '/docker', description: '安装和管理Docker镜像' }
+  { id: 6, icon: '🔍', title: 'AI查询', route: '/ai-search', description: '智能查询文件' },
+  { id: 7, icon: '👨', title: '个人中心', route: '/personal', description: '管理个人信息' }
 ])
 
 // 快捷操作

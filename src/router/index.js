@@ -146,7 +146,17 @@
            meta: {
                title: '系统设置' // 可选：页面标题
            }
-       }
+       },
+       {
+           path: '/ai-search',
+           name: 'AiSearch',
+           component: () => import('../components/AiSearch.vue')
+       },
+       {
+           path: '/personal',
+           name: 'PersonalCenter',
+           component: () => import('@/components/PersonalCenter.vue')
+       },
        // 可以继续添加更多路由
    ]
 

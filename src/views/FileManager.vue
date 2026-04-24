@@ -439,7 +439,7 @@ watch(currentPath, () => {
   flex-direction: column;
   padding: 20px;
   box-sizing: border-box;
-  background-color: #f9f9f9;
+  background-color: #f8f9fa;
 }
 
 .toolbar {
@@ -447,10 +447,10 @@ watch(currentPath, () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
-  padding: 10px 15px;
-  background-color: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
 .path-nav {
@@ -460,11 +460,12 @@ watch(currentPath, () => {
 
 .path-nav span {
   cursor: pointer;
-  color: #1989fa;
+  color: #40007a;
+  font-weight: 500;
 }
 
 .path-nav span:hover {
-  text-decoration: underline;
+  color: #6800c1;
 }
 
 .search-box {
@@ -473,11 +474,16 @@ watch(currentPath, () => {
 }
 
 .search-box input {
-  padding: 6px 12px;
+  padding: 8px 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
   width: 200px;
+  outline: none;
+}
+
+.search-box input:focus {
+  border-color: #40007a;
 }
 
 .toolbar-actions {
@@ -486,39 +492,40 @@ watch(currentPath, () => {
 }
 
 .btn {
-  padding: 6px 16px;
-  background: #1989fa;
+  padding: 8px 16px;
+  background: #40007a;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s;
+  font-weight: 500;
+  transition: background-color 0.2s;
 }
 
 .btn:hover {
-  background: #0f7ae5;
+  background: #6800c1;
 }
 
 .file-list {
   flex: 1;
   overflow: auto;
-  background-color: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0f0f0;
   cursor: default;
-  transition: background 0.2s;
+  transition: background-color 0.2s;
 }
 
 .file-item:hover {
-  background: #f5f8ff;
+  background-color: #f8f9ff;
 }
 
 .file-icon {
@@ -532,6 +539,7 @@ watch(currentPath, () => {
   flex: 1;
   font-size: 14px;
   color: #333;
+  font-weight: 500;
 }
 
 .file-meta {
@@ -558,26 +566,26 @@ watch(currentPath, () => {
 .context-menu {
   position: fixed;
   width: 120px;
-  background: white;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
   z-index: 1000;
 }
 
 .menu-item {
-  padding: 8px 16px;
+  padding: 10px 16px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s;
+  color: #333;
+  transition: background-color 0.2s;
 }
 
 .menu-item:hover {
-  background: #f5f5f5;
+  background-color: #f8f9ff;
 }
 
 .menu-item.danger {
-  color: #f56c6c;
+  color: #d32f2f;
 }
 
 .modal {
@@ -586,7 +594,7 @@ watch(currentPath, () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -594,17 +602,18 @@ watch(currentPath, () => {
 }
 
 .modal-content {
-  background: white;
+  background: #ffffff;
   padding: 25px;
-  border-radius: 6px;
+  border-radius: 8px;
   width: 320px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  border: 1px solid #e0e0e0;
 }
 
 .modal-content h3 {
   margin: 0 0 20px 0;
-  font-size: 16px;
+  font-size: 18px;
   color: #333;
+  font-weight: 600;
 }
 
 .modal-content input {
@@ -612,9 +621,14 @@ watch(currentPath, () => {
   padding: 10px;
   margin: 0 0 20px 0;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   box-sizing: border-box;
   font-size: 14px;
+  outline: none;
+}
+
+.modal-content input:focus {
+  border-color: #40007a;
 }
 
 .modal-btns {
@@ -626,19 +640,28 @@ watch(currentPath, () => {
 .modal-btns button {
   padding: 8px 16px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .modal-btns button:first-child {
-  background: #1989fa;
+  background: #40007a;
   color: white;
+}
+
+.modal-btns button:first-child:hover {
+  background: #6800c1;
 }
 
 .modal-btns button:last-child {
   background: #f5f5f5;
   color: #666;
+}
+
+.modal-btns button:last-child:hover {
+  background: #e0e0e0;
 }
 
 .toast {
@@ -647,19 +670,18 @@ watch(currentPath, () => {
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 20px;
-  border-radius: 4px;
+  border-radius: 6px;
   color: white;
   font-size: 14px;
   z-index: 1002;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
 }
 
 .toast.success {
-  background: #67c23a;
+  background: #4caf50;
 }
 
 .toast.error {
-  background: #f56c6c;
+  background: #f44336;
 }
 
 /* 下拉菜单样式 */
@@ -668,32 +690,37 @@ watch(currentPath, () => {
   display: inline-block;
   z-index: 101;
 }
+
 .dropdown-btn {
   display: flex;
   align-items: center;
   gap: 5px;
 }
+
 .arrow {
   font-size: 10px;
 }
+
 .dropdown-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  background: white;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
   z-index: 102;
   min-width: 120px;
   margin-top: 2px;
 }
+
 .dropdown-menu .menu-item {
-  padding: 8px 16px;
+  padding: 10px 16px;
   cursor: pointer;
-  transition: background 0.2s;
+  color: #333;
+  transition: background-color 0.2s;
 }
+
 .dropdown-menu .menu-item:hover {
-  background: #f5f8ff;
+  background-color: #f8f9ff;
 }
 </style>

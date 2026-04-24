@@ -6,7 +6,7 @@ const fileUtils = require('../utils/fileUtils');
 // 初始化multer（内存存储）
 const upload = multer({ storage: multer.memoryStorage() });
 
-// 1. 获取文件列表
+//  获取文件列表
 router.get('/list', async (req, res) => {
     try {
         const { path = '' } = req.query;
@@ -17,7 +17,7 @@ router.get('/list', async (req, res) => {
     }
 });
 
-// 2. 文件上传
+// 文件上传
 // router.post('/upload', upload.single('file'), async (req, res) => {
 //     try {
 //         if (!req.file) {
@@ -43,7 +43,7 @@ router.post('/upload', upload.any(), async (req, res) => {
         const { path = '' } = req.body;
 
         let result = [];
-        // 判断是否是文件夹上传（通过 webkitRelativePath 判断）
+        // 通过 webkitRelativePath 判断是否是文件夹上传
         const isFolderUpload = req.files.some(file => file.webkitRelativePath);
         if (isFolderUpload) {
             // 处理文件夹上传
@@ -69,7 +69,7 @@ router.post('/upload', upload.any(), async (req, res) => {
     }
 });
 
-// 3. 文件下载
+//  文件下载
 router.get('/download', async (req, res) => {
     try {
         const { path } = req.query;
@@ -80,7 +80,7 @@ router.get('/download', async (req, res) => {
     }
 });
 
-// 4. 删除文件/文件夹
+// 删除文件/文件夹
 router.delete('/delete', async (req, res) => {
     try {
         const { path } = req.body;
@@ -91,7 +91,7 @@ router.delete('/delete', async (req, res) => {
     }
 });
 
-// 5. 重命名
+//  重命名
 router.post('/rename', async (req, res) => {
     try {
         const { oldPath, newName } = req.body;
@@ -102,7 +102,7 @@ router.post('/rename', async (req, res) => {
     }
 });
 
-// 6. 设置剪贴板（复制/剪切）
+// 设置剪贴板（复制/剪切）
 router.post('/clipboard', async (req, res) => {
     try {
         const { type, path } = req.body; // type: copy/cut
@@ -113,7 +113,7 @@ router.post('/clipboard', async (req, res) => {
     }
 });
 
-// 7. 粘贴文件
+// 粘贴文件
 router.post('/paste', async (req, res) => {
     try {
         const { targetPath = '' } = req.body;
@@ -138,7 +138,7 @@ router.post('/paste', async (req, res) => {
     }
 });
 
-// 8. 搜索文件
+// 搜索文件
 router.get('/search', async (req, res) => {
     try {
         const { keyword, path = '' } = req.query;
