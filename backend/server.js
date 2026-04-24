@@ -292,6 +292,26 @@ app.post('/api/recycle/delete', async (req, res) => {
     }
 });
 
+
+// 创建共享
+app.post('/api/share/create', (req, res) => {
+    const { filePath } = req.body;
+    const link = fileUtils.createShare(filePath);
+    res.json({ success: true, link });
+});
+
+// 访问共享文件
+app.get('/api/share/:link', async (req, res) => {
+    const { link } = req.params;
+    const share = fileUtils.getShareList().find(s => s.link === link);
+    if (!share) return res.status(404).send('共享不存在');
+
+    share.views++;
+    const filePath = fileUtils.safePath(share.filePath);
+    res.download(filePath);
+});
+
+
 // 6. 获取共享记录
 app.get('/api/share/list', (req, res) => {
     res.json({ success: true, data: fileUtils.getShareList() });
@@ -303,6 +323,8 @@ app.post('/api/share/cancel', (req, res) => {
     fileUtils.cancelShare(link);
     res.json({ success: true });
 });
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

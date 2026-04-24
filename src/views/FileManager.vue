@@ -109,8 +109,10 @@
       <div class="menu-item" @click="handleCopy">复制</div>
       <div class="menu-item" @click="handleCut">剪切</div>
       <div class="menu-item" @click="handlePaste">粘贴</div>
+      <div class="menu-item" @click="handleShare">共享文件</div> <!-- 新增共享 -->
       <div class="menu-item" @click="handleRename">重命名</div>
       <div class="menu-item danger" @click="handleDelete">删除</div>
+
     </div>
 
     <!-- 重命名弹窗 -->
@@ -155,6 +157,7 @@ import {
   renameFile, setClipboard, pasteFile, searchFiles,
   createFolder
 } from '@/api/fileApi';
+import axios from 'axios';
 
 // 状态管理
 const fileList = ref([]); // 文件列表
@@ -303,7 +306,24 @@ const showContextMenu = (e, file) => {
   };
   document.addEventListener('click', closeContextMenu, { once: true });
 };
+// 新增：共享文件
+const handleShare = async () => {
+  const file = contextMenu.value.file;
+  try {
+    // 调用后端创建共享链接
+    const res = await axios.post('http://localhost:3000/api/share/create', {
+      filePath: file.path
+    });
+    const shareUrl = `http://localhost:3000/api/share/${res.data.link}`;
 
+    // 复制到剪贴板
+    await navigator.clipboard.writeText(shareUrl);
+    showToast(`共享链接已复制：${shareUrl}`);
+  } catch (e) {
+    showToast('共享失败', 'error');
+  }
+  closeContextMenu();
+};
 // 关闭右键菜单
 const closeContextMenu = () => {
   contextMenu.value.visible = false;
