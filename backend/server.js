@@ -8,6 +8,8 @@ const { Pool } = require('pg'); // 从 'pg' 库中导入 Pool
 const fileRoutes = require('./routes/fileRoutes'); // 文件管理器
 const fileUtils = require('./utils/fileUtils'); // 文件管理器
 const app = express();
+const path = require('path');
+const fs = require('fs/promises');
 app.use(cors());
 app.use(express.json());
 
@@ -218,6 +220,89 @@ const system = require('./utils/system'); // 路径：和 server.js 同级，直
 // 注册路由，统一添加前缀 /api/system（接口完整路径变为 /api/system/stats）
 app.use('/api/system', system);
 console.log('系统服务：监控 已启动')
+
+
+// 1. 获取当前用户信息
+app.get('/api/user/profile', async (req, res) => {
+    try {
+        const query = 'SELECT id, username, account, device_name, created_at FROM users LIMIT 1';
+        db.query(query, (err, results) => {
+            if (err || results.length === 0) {
+                return res.status(404).json({ success: false });
+            }
+            res.json({ success: true, data: results[0] });
+        });
+    } catch (e) {
+        res.status(500).json({ success: false });
+    }
+});
+
+// 2. 修改用户信息
+app.post('/api/user/update', async (req, res) => {
+    try {
+        const { username, device_name, password } = req.body;
+        let sql = 'UPDATE users SET username=?, device_name=?';
+        let params = [username, device_name];
+
+        if (password && password.trim() !== '') {
+            const hashedPwd = await bcrypt.hash(password, 10);
+            sql += ', password=?';
+            params.push(hashedPwd);
+        }
+
+        db.query(sql, params, (err) => {
+            if (err) return res.json({ success: false, message: '修改失败' });
+            res.json({ success: true, message: '修改成功' });
+        });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+// 3. 获取回收站文件
+app.get('/api/recycle/list', async (req, res) => {
+    try {
+        const list = await fileUtils.getRecycleList();
+        res.json({ success: true, data: list });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false });
+    }
+});
+
+// 4. 恢复文件
+app.post('/api/recycle/restore', async (req, res) => {
+    try {
+        const { path } = req.body;
+        await fileUtils.restoreFile(path);
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+// 5. 彻底删除文件
+app.post('/api/recycle/delete', async (req, res) => {
+    try {
+        const { path } = req.body;
+        await fileUtils.forceDelete(path);
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+// 6. 获取共享记录
+app.get('/api/share/list', (req, res) => {
+    res.json({ success: true, data: fileUtils.getShareList() });
+});
+
+// 7. 取消共享
+app.post('/api/share/cancel', (req, res) => {
+    const { link } = req.body;
+    fileUtils.cancelShare(link);
+    res.json({ success: true });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
