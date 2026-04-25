@@ -317,14 +317,16 @@ const forceDelete = async (fileName) => {
 // ================== 共享 ==================
 let shareList = [];
 
-function createShare(filePath, type = 'public', code = '') {
-    const link = Math.random().toString(36).slice(2);
+function createShare(filePath, type = 'public', code = '', permission = 'read') {
+    const link = Math.random().toString(36).substr(2, 10);
     shareList.push({
         link,
         filePath,
         type,
         code,
+        permission,
         views: 0,
+        accessLog: [],
         createdAt: new Date()
     });
     return link;
@@ -334,9 +336,14 @@ function getShareList() {
     return shareList;
 }
 
+function getShareByLink(link) {
+    return shareList.find(s => s.link === link);
+}
+
 function cancelShare(link) {
     shareList = shareList.filter(s => s.link !== link);
 }
+
 
 // ✅ 正确导出：所有方法只导出一次！！！
 module.exports = {
@@ -359,6 +366,7 @@ module.exports = {
     forceDelete,
     createShare,
     getShareList,
-    cancelShare
+    cancelShare,
+    getShareByLink,
 
 };

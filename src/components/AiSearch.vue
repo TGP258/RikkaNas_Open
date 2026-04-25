@@ -1,7 +1,7 @@
 <template>
   <div class="ai-search-page">
     <div class="container">
-      <h2>🤖 AI 智能文件查询</h2>
+      <h2>AI 智能文件查询</h2>
       <p>使用自然语言描述文件，AI 自动帮你搜索</p>
 
       <div class="input-box">
@@ -22,11 +22,11 @@
 
       <!-- 搜索结果 -->
       <div class="result-list" v-if="resultList.length > 0">
-        <h3>📄 搜索结果</h3>
+        <h3>搜索结果</h3>
         <div class="file-item" v-for="item in resultList" :key="item.path">
-          <span class="icon">{{ item.isDir ? "📁" : "📄" }}</span>
+          <span class="icon">{{ item.isDir ? "文件夹" : "文件" }}</span>
           <span class="name">{{ item.name }}</span>
-          <button @click="downloadFile(item.path)">下载</button>
+          <button @click="downloadFile(item.path)" class="download-btn">下载</button>
         </div>
       </div>
 
@@ -53,9 +53,6 @@ export default {
     }
   },
   methods: {
-    // ==============================
-    // 👉 主函数：AI 查询
-    // ==============================
     async startAiSearch() {
       if (!this.userInput.trim()) {
         alert('请输入内容')
@@ -66,16 +63,13 @@ export default {
       this.searched = true
 
       try {
-        // 1. 调用大模型 → 获取【搜索关键词】
         const searchKeyword = await this.getKeywordFromAI(this.userInput)
 
-        // 👇 在这里打印 AI 输出到控制台
         console.log('=====================================')
-        console.log('🟢 用户输入：', this.userInput)
-        console.log('🤖 AI 模型返回关键词：', searchKeyword)
+        console.log('用户输入：', this.userInput)
+        console.log('AI 模型返回关键词：', searchKeyword)
         console.log('=====================================')
 
-        // 2. 自动调用你现有的 search 接口
         const res = await axios.get("http://localhost:3000/api/files/search", {
           params: {
             keyword: searchKeyword,
@@ -92,7 +86,6 @@ export default {
       }
     },
 
-    // 🤖 核心：调用通义千问大模型
     async getKeywordFromAI(userText) {
       try {
         const response = await axios({
@@ -133,10 +126,7 @@ export default {
         })
 
         const aiResult = response.data.output.text.trim()
-
-        // 👇 也在这里打印一次
         console.log('[AI 大模型返回]', aiResult)
-
         return aiResult
       } catch (err) {
         console.error('AI 请求失败：', err)
@@ -144,7 +134,6 @@ export default {
       }
     },
 
-    // 下载（你原有方法）
     downloadFile(path) {
       downloadFile(path)
     }
@@ -155,50 +144,124 @@ export default {
 <style scoped>
 .ai-search-page {
   max-width: 800px;
-  margin: 50px auto;
+  margin: 20px auto;
   padding: 20px;
 }
+
 .container {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.95);
   padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
 }
+
+.container h2 {
+  font-size: 1.8rem;
+  color: #333;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.container p {
+  font-size: 1rem;
+  color: #666;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.input-box {
+  margin-bottom: 24px;
+}
+
 textarea {
   width: 100%;
   padding: 14px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  margin-bottom: 16px;
   box-sizing: border-box;
-  resize: none; /* 禁止缩放 */
-  overflow: hidden; /* 去掉滚动条 */
+  resize: none;
+  overflow: hidden;
+  font-size: 14px;
+  transition: border-color 0.2s;
 }
-button {
+
+textarea:focus {
+  outline: none;
+  border-color: #40007a;
+}
+
+.input-box button {
   width: 100%;
   padding: 14px;
-  background: #6366f1;
+  background: linear-gradient(90deg, #40007a, #6800c1);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 16px;
   cursor: pointer;
+  transition: background 0.2s;
 }
-button:disabled {
+
+.input-box button:disabled {
   background: #a5b4fc;
+  cursor: not-allowed;
 }
+
+.result-list h3 {
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F0F0F0;
+}
+
 .file-item {
   display: flex;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
+  padding: 16px 0;
+  border-bottom: 1px solid #F0F0F0;
+  transition: background-color 0.2s;
 }
-.name {
+
+.file-item:hover {
+  background: #F9F9F9;
+  padding-left: 8px;
+  border-radius: 8px;
+}
+
+.file-item .icon {
+  color: #40007a;
+  font-weight: 500;
+  margin-right: 12px;
+  width: 60px;
+}
+
+.file-item .name {
   flex: 1;
+  color: #333;
+  font-size: 14px;
 }
+
+.download-btn {
+  padding: 6px 14px;
+  background: #40007a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.download-btn:hover {
+  background: #6800c1;
+}
+
 .empty-tip {
   text-align: center;
   padding: 30px 0;
   color: #999;
+  font-size: 14px;
 }
 </style>

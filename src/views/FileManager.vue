@@ -1,5 +1,9 @@
 <template>
   <div class="file-manager">
+    <div class="logo-section">
+      <img class="logo" src="../assets/RkCloudLOGO.png" alt="RikkaNas Logo">
+      <h1>RkCloud文件管理器</h1>
+    </div>
     <!-- 顶部操作栏 -->
     <div class="toolbar">
       <!-- 路径导航 -->
@@ -17,27 +21,26 @@
             placeholder="搜索文件/文件夹..."
             @keyup.enter="handleSearch"
         />
-        <button @click="handleSearch">搜索</button>
-        <button v-if="isSearching" @click="resetSearch">重置</button>
+        <button @click="handleSearch" class="search-btn">搜索</button>
+        <button v-if="isSearching" @click="resetSearch" class="reset-btn">重置</button>
       </div>
 
       <!-- 操作按钮组 -->
       <div class="toolbar-actions">
         <!-- 创建文件夹按钮 -->
-        <button class="btn" @click="showCreateFolderModal = true">
+        <button class="btn primary-btn" @click="showCreateFolderModal = true">
           创建文件夹
         </button>
 
         <!-- 上传下拉按钮 -->
         <div class="dropdown" @click.stop>
-          <button class="btn dropdown-btn" @click="toggleUploadMenu">
+          <button class="btn primary-btn dropdown-btn" @click="toggleUploadMenu">
             上传 <span class="arrow">▼</span>
           </button>
           <!-- 上传下拉菜单 -->
           <div v-if="showUploadMenu" class="dropdown-menu">
             <!-- 上传文件（无webkitdirectory） -->
             <div class="menu-item" @click="triggerFileInput">
-              <!-- 关键1：绑定正确的ref变量 -->
               <input
                   type="file"
                   ref="fileInputRef"
@@ -49,7 +52,6 @@
             </div>
             <!-- 上传文件夹（保留webkitdirectory） -->
             <div class="menu-item" @click="triggerFolderInput">
-              <!-- 关键1：绑定正确的ref变量 -->
               <input
                   type="file"
                   ref="folderInputRef"
@@ -67,6 +69,14 @@
 
     <!-- 文件列表 -->
     <div class="file-list">
+      <!-- 列表表头 -->
+      <div class="file-list-header">
+        <div class="col-icon">类型</div>
+        <div class="col-name">名称</div>
+        <div class="col-meta">大小/类型</div>
+        <div class="col-time">修改时间</div>
+      </div>
+
       <!-- 无数据提示 -->
       <div v-if="fileList.length === 0" class="empty-tip">
         {{ isSearching ? '未找到匹配的文件' : '当前目录为空' }}
@@ -80,20 +90,20 @@
           @contextmenu="(e) => showContextMenu(e, file)"
       >
         <!-- 图标 -->
-        <div class="file-icon">
-          <span v-if="file.type === 'folder'">📁</span>
-          <span v-else>📄</span>
+        <div class="col-icon file-icon">
+          <span v-if="file.type === 'folder'" class="icon-folder">文件夹</span>
+          <span v-else class="icon-file">文件</span>
         </div>
         <!-- 名称 -->
-        <div class="file-name" @dblclick="handleItemDblClick(file)">
+        <div class="col-name file-name" @dblclick="handleItemDblClick(file)">
           {{ file.name }}
         </div>
         <!-- 大小/类型 -->
-        <div class="file-meta">
+        <div class="col-meta file-meta">
           {{ file.type === 'folder' ? '文件夹' : formatSize(file.size) }}
         </div>
         <!-- 修改时间 -->
-        <div class="file-time">
+        <div class="col-time file-time">
           {{ formatTime(file.mtime) }}
         </div>
       </div>
@@ -109,10 +119,9 @@
       <div class="menu-item" @click="handleCopy">复制</div>
       <div class="menu-item" @click="handleCut">剪切</div>
       <div class="menu-item" @click="handlePaste">粘贴</div>
-      <div class="menu-item" @click="handleShare">共享文件</div> <!-- 新增共享 -->
+      <div class="menu-item" @click="handleShare">共享文件</div>
       <div class="menu-item" @click="handleRename">重命名</div>
       <div class="menu-item danger" @click="handleDelete">删除</div>
-
     </div>
 
     <!-- 重命名弹窗 -->
@@ -121,8 +130,8 @@
         <h3>重命名</h3>
         <input v-model="newFileName" placeholder="请输入新名称" />
         <div class="modal-btns">
-          <button @click="confirmRename">确认</button>
-          <button @click="renameVisible = false">取消</button>
+          <button class="btn primary-btn" @click="confirmRename">确认</button>
+          <button class="btn default-btn" @click="renameVisible = false">取消</button>
         </div>
       </div>
     </div>
@@ -137,8 +146,8 @@
             @keyup.enter="confirmCreateFolder"
         />
         <div class="modal-btns">
-          <button @click="confirmCreateFolder">确认创建</button>
-          <button @click="showCreateFolderModal = false">取消</button>
+          <button class="btn primary-btn" @click="confirmCreateFolder">确认创建</button>
+          <button class="btn default-btn" @click="showCreateFolderModal = false">取消</button>
         </div>
       </div>
     </div>
@@ -146,6 +155,44 @@
     <!-- 提示框 -->
     <div v-if="toast.visible" class="toast" :class="toast.type">
       {{ toast.message }}
+    </div>
+
+    <!-- 共享文件弹窗 -->
+    <div v-if="shareModalVisible" class="modal">
+      <div class="modal-content share-modal">
+        <h3>共享文件</h3>
+
+        <div class="form-group">
+          <label>共享方式</label>
+          <div class="radio-group">
+            <label><input v-model="shareType" type="radio" value="public"> 公开共享</label>
+            <label><input v-model="shareType" type="radio" value="private"> 私密共享（需提取码）</label>
+          </div>
+        </div>
+
+        <div class="form-group" v-if="shareType === 'private'">
+          <label>提取码</label>
+          <input v-model="shareCode" placeholder="请设置4位数字提取码" maxlength="4" />
+        </div>
+
+        <div class="form-group">
+          <label>权限设置</label>
+          <div class="radio-group">
+            <label><input v-model="sharePermission" type="radio" value="read"> 只读</label>
+            <label><input v-model="sharePermission" type="radio" value="write"> 可编辑</label>
+          </div>
+        </div>
+
+        <div class="form-group share-link" v-if="shareLink">
+          <label>共享链接（已自动复制）</label>
+          <input readonly :value="shareLink" />
+        </div>
+
+        <div class="modal-btns">
+          <button class="btn primary-btn" @click="createShare">确认创建共享</button>
+          <button class="btn default-btn" @click="closeShareModal">关闭</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -159,23 +206,70 @@ import {
 } from '@/api/fileApi';
 import axios from 'axios';
 
-// 状态管理
-const fileList = ref([]); // 文件列表
-const currentPath = ref(''); // 当前路径
-const currentPathArr = ref([]); // 当前路径拆分的数组
-const searchKeyword = ref(''); // 搜索关键词
-const isSearching = ref(false); // 是否在搜索状态
-const contextMenu = ref({ visible: false, x: 0, y: 0, file: null }); // 右键菜单
-const renameVisible = ref(false); // 重命名弹窗
-const newFileName = ref(''); // 新文件名
-const showCreateFolderModal = ref(false); // 创建文件夹弹窗
-const newFolderName = ref(''); // 新文件夹名称
-const toast = ref({ visible: false, message: '', type: 'success' }); // 提示框
-const showUploadMenu = ref(false); // 控制上传下拉菜单显示
+// 共享相关状态
+const shareModalVisible = ref(false);
+const shareType = ref('public');
+const shareCode = ref('');
+const sharePermission = ref('read');
+const shareLink = ref('');
 
-// 关键2：声明ref变量（Vue3 script setup 必须这样用）
-const fileInputRef = ref(null); // 文件输入框引用
-const folderInputRef = ref(null); // 文件夹输入框引用
+// 打开共享弹窗
+const handleShare = () => {
+  shareModalVisible.value = true;
+  shareType.value = 'public';
+  shareCode.value = '';
+  sharePermission.value = 'read';
+  shareLink.value = '';
+  closeContextMenu();
+};
+
+// 关闭弹窗
+const closeShareModal = () => {
+  shareModalVisible.value = false;
+};
+
+// 创建共享
+const createShare = async () => {
+  const file = contextMenu.value.file;
+
+  if (shareType.value === 'private' && !shareCode.value) {
+    showToast('请设置提取码', 'error');
+    return;
+  }
+
+  try {
+    const res = await axios.post('http://localhost:3000/api/share/create', {
+      filePath: file.path,
+      type: shareType.value,
+      code: shareCode.value,
+      permission: sharePermission.value
+    });
+
+    shareLink.value = `http://localhost:5173/share/${res.data.link}`;
+    navigator.clipboard.writeText(shareLink.value);
+    showToast('共享创建成功，链接已复制！');
+  } catch (e) {
+    showToast('共享失败', 'error');
+  }
+};
+
+// 核心状态管理
+const fileList = ref([]);
+const currentPath = ref('');
+const currentPathArr = ref([]);
+const searchKeyword = ref('');
+const isSearching = ref(false);
+const contextMenu = ref({ visible: false, x: 0, y: 0, file: null });
+const renameVisible = ref(false);
+const newFileName = ref('');
+const showCreateFolderModal = ref(false);
+const newFolderName = ref('');
+const toast = ref({ visible: false, message: '', type: 'success' });
+const showUploadMenu = ref(false);
+
+// 文件上传引用
+const fileInputRef = ref(null);
+const folderInputRef = ref(null);
 
 // 格式化文件大小
 const formatSize = (bytes) => {
@@ -218,29 +312,28 @@ const handleItemDblClick = (file) => {
   }
 };
 
-// 下拉菜单切换逻辑
+// 切换上传菜单
 const toggleUploadMenu = () => {
   showUploadMenu.value = !showUploadMenu.value;
 };
 
-// 关键3：修复文件输入框触发逻辑（使用声明的ref变量）
+// 触发文件上传
 const triggerFileInput = () => {
-  // 先判断ref是否存在，避免报错
   if (fileInputRef.value) {
     fileInputRef.value.click();
-    showUploadMenu.value = false; // 点击后关闭菜单
+    showUploadMenu.value = false;
   }
 };
 
-// 关键4：修复文件夹输入框触发逻辑（使用声明的ref变量）
+// 触发文件夹上传
 const triggerFolderInput = () => {
   if (folderInputRef.value) {
     folderInputRef.value.click();
-    showUploadMenu.value = false; // 点击后关闭菜单
+    showUploadMenu.value = false;
   }
 };
 
-// 上传文件（仅文件，无目录）
+// 处理文件上传
 const handleFileUpload = (e) => {
   const files = Array.from(e.target.files);
   if (files.length === 0) return;
@@ -256,14 +349,13 @@ const handleFileUpload = (e) => {
       });
 };
 
-// 上传文件夹（保留目录结构）
+// 处理文件夹上传
 const handleFolderUpload = (e) => {
   const files = Array.from(e.target.files);
   if (files.length === 0) return;
 
   uploadFile(files, currentPath.value)
       .then(() => {
-        // 统计上传的根文件夹数量（去重）
         const rootFolders = new Set(files.map(f => f.webkitRelativePath.split('/')[0]));
         showToast(`成功上传 ${rootFolders.size} 个文件夹（共 ${files.length} 个文件）`);
         loadFileList(currentPath.value);
@@ -306,24 +398,7 @@ const showContextMenu = (e, file) => {
   };
   document.addEventListener('click', closeContextMenu, { once: true });
 };
-// 新增：共享文件
-const handleShare = async () => {
-  const file = contextMenu.value.file;
-  try {
-    // 调用后端创建共享链接
-    const res = await axios.post('http://localhost:3000/api/share/create', {
-      filePath: file.path
-    });
-    const shareUrl = `http://localhost:3000/api/share/${res.data.link}`;
 
-    // 复制到剪贴板
-    await navigator.clipboard.writeText(shareUrl);
-    showToast(`共享链接已复制：${shareUrl}`);
-  } catch (e) {
-    showToast('共享失败', 'error');
-  }
-  closeContextMenu();
-};
 // 关闭右键菜单
 const closeContextMenu = () => {
   contextMenu.value.visible = false;
@@ -436,10 +511,9 @@ const showToast = (message, type = 'success') => {
   }, 2000);
 };
 
-// 合并后的onMounted
+// 初始化
 onMounted(() => {
   loadFileList();
-  // 点击页面其他区域关闭下拉菜单
   document.addEventListener('click', () => {
     showUploadMenu.value = false;
   });
@@ -460,22 +534,32 @@ watch(currentPath, () => {
   padding: 20px;
   box-sizing: border-box;
   background-color: #f8f9fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* 新增圆角样式 - 推荐值 16px（和系统其他组件风格统一） */
+  border-radius: 16px;
+  /* 可选：防止内部内容溢出时裁切圆角 */
+  overflow: hidden;
 }
 
+/* 顶部工具栏 */
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 20px;
-  padding: 15px 20px;
+  padding: 16px 24px;
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .path-nav {
-  font-size: 16px;
+  font-size: 15px;
   color: #333;
+  white-space: nowrap;
 }
 
 .path-nav span {
@@ -488,57 +572,163 @@ watch(currentPath, () => {
   color: #6800c1;
 }
 
+/* 搜索框 */
 .search-box {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
 }
 
 .search-box input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 14px;
-  width: 200px;
+  width: 220px;
   outline: none;
+  transition: border-color 0.2s;
 }
 
 .search-box input:focus {
   border-color: #40007a;
 }
 
+.search-btn, .reset-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.search-btn {
+  background: #40007a;
+  color: white;
+}
+
+.search-btn:hover {
+  background: #6800c1;
+}
+
+.reset-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.reset-btn:hover {
+  background: #e0e0e0;
+}
+
+/* 操作按钮组 */
 .toolbar-actions {
   display: flex;
   gap: 10px;
 }
 
 .btn {
-  padding: 8px 16px;
-  background: #40007a;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  padding: 10px 18px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+}
+
+.primary-btn {
+  background: linear-gradient(90deg, #40007a, #6800c1);
+  color: white;
+}
+
+.primary-btn:hover {
+  background: #40007a;
+}
+
+.default-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.default-btn:hover {
+  background: #e0e0e0;
+}
+
+/* 下拉菜单 */
+.dropdown {
+  position: relative;
+  display: inline-block;
+  z-index: 101;
+}
+
+.dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  z-index: 102;
+  min-width: 140px;
+  margin-top: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu .menu-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #333;
   transition: background-color 0.2s;
+  font-size: 14px;
 }
 
-.btn:hover {
-  background: #6800c1;
+.dropdown-menu .menu-item:hover {
+  background-color: #f8f9ff;
 }
 
+/* 文件列表 */
 .file-list {
   flex: 1;
   overflow: auto;
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* 文件列表表头 */
+.file-list-header {
+  display: flex;
+  padding: 12px 24px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 列表列宽统一 */
+.col-icon { width: 80px; text-align: center; }
+.col-name { flex: 1; }
+.col-meta { width: 120px; text-align: right; }
+.col-time { width: 200px; text-align: right; }
+
+/* 文件项 */
 .file-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border-bottom: 1px solid #f0f0f0;
   cursor: default;
   transition: background-color 0.2s;
@@ -548,48 +738,47 @@ watch(currentPath, () => {
   background-color: #f8f9ff;
 }
 
-.file-icon {
-  width: 30px;
-  text-align: center;
-  font-size: 20px;
-  margin-right: 10px;
+.file-icon .icon-folder {
+  color: #40007a;
+  font-weight: 500;
+}
+
+.file-icon .icon-file {
+  color: #666;
 }
 
 .file-name {
-  flex: 1;
   font-size: 14px;
   color: #333;
   font-weight: 500;
 }
 
 .file-meta {
-  width: 120px;
-  text-align: right;
   color: #666;
   font-size: 13px;
 }
 
 .file-time {
-  width: 200px;
-  text-align: right;
-  color: #666;
+  color: #999;
   font-size: 12px;
 }
 
 .empty-tip {
   text-align: center;
-  padding: 60px;
+  padding: 80px 20px;
   color: #999;
   font-size: 14px;
 }
 
+/* 右键菜单 */
 .context-menu {
   position: fixed;
-  width: 120px;
+  width: 140px;
   background: #ffffff;
   border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border-radius: 8px;
   z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .menu-item {
@@ -605,9 +794,14 @@ watch(currentPath, () => {
 }
 
 .menu-item.danger {
-  color: #d32f2f;
+  color: #F44336;
 }
 
+.menu-item.danger:hover {
+  background-color: #fff5f5;
+}
+
+/* 弹窗样式 */
 .modal {
   position: fixed;
   top: 0;
@@ -623,10 +817,15 @@ watch(currentPath, () => {
 
 .modal-content {
   background: #ffffff;
-  padding: 25px;
-  border-radius: 8px;
-  width: 320px;
+  padding: 28px;
+  border-radius: 12px;
+  width: 360px;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.share-modal {
+  width: 440px;
 }
 
 .modal-content h3 {
@@ -638,13 +837,14 @@ watch(currentPath, () => {
 
 .modal-content input {
   width: 100%;
-  padding: 10px;
+  padding: 12px 14px;
   margin: 0 0 20px 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   box-sizing: border-box;
   font-size: 14px;
   outline: none;
+  transition: border-color 0.2s;
 }
 
 .modal-content input:focus {
@@ -655,45 +855,54 @@ watch(currentPath, () => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  margin-top: 8px;
 }
 
-.modal-btns button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+/* 表单组样式 */
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
   font-weight: 500;
+  color: #333;
 }
 
-.modal-btns button:first-child {
-  background: #40007a;
-  color: white;
+.radio-group {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.modal-btns button:first-child:hover {
-  background: #6800c1;
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: normal;
+  cursor: pointer;
 }
 
-.modal-btns button:last-child {
-  background: #f5f5f5;
-  color: #666;
+.share-link input {
+  background: #f9f9f9;
+  color: #333;
+  cursor: default;
 }
 
-.modal-btns button:last-child:hover {
-  background: #e0e0e0;
-}
-
+/* 提示框 */
 .toast {
   position: fixed;
   top: 30px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 12px 24px;
+  border-radius: 8px;
   color: white;
   font-size: 14px;
   z-index: 1002;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.2s ease;
 }
 
 .toast.success {
@@ -704,43 +913,80 @@ watch(currentPath, () => {
   background: #f44336;
 }
 
-/* 下拉菜单样式 */
-.dropdown {
-  position: relative;
-  display: inline-block;
-  z-index: 101;
+/* 动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-.dropdown-btn {
+/* 响应式适配 */
+@media (max-width: 992px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .path-nav, .search-box, .toolbar-actions {
+    width: 100%;
+  }
+
+  .search-box {
+    justify-content: center;
+  }
+
+  .toolbar-actions {
+    justify-content: center;
+  }
+
+  .col-time {
+    width: 160px;
+  }
+}
+
+@media (max-width: 768px) {
+  .file-list-header, .file-item {
+    padding: 10px 16px;
+  }
+
+  .col-meta {
+    width: 100px;
+  }
+
+  .col-time {
+    display: none;
+  }
+
+  .modal-content {
+    width: 90%;
+    max-width: 320px;
+  }
+
+  .share-modal {
+    width: 90%;
+    max-width: 380px;
+  }
+}
+
+.logo-section {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 16px;
 }
 
-.arrow {
-  font-size: 10px;
+.logo-section img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
 }
 
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  z-index: 102;
-  min-width: 120px;
-  margin-top: 2px;
-}
-
-.dropdown-menu .menu-item {
-  padding: 10px 16px;
-  cursor: pointer;
+.logo-section h1 {
+  font-size: 1.8rem;
   color: #333;
-  transition: background-color 0.2s;
+  margin: 0;
 }
-
-.dropdown-menu .menu-item:hover {
-  background-color: #f8f9ff;
+.logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 15px;
 }
 </style>

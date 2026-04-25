@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="header">
-      <img class="logo" src="../assets/RkCloudLOGO.png" alt="RikkaNas Logo" width="256" height="256" style="place-items: center">
+      <img class="logo" src="../assets/RkCloudLOGO2.png" alt="RikkaNas Logo" width="256" height="256" style="place-items: center">
       <h1>RikaOS</h1>
       <p>个人云存储解决方案</p>
     </div>

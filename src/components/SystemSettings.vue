@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="header">
-      <img class="logo" src="../assets/RkCloudLOGO.png" alt="RikkaNas Logo" width="80" height="80">
+      <img class="logo" src="../assets/RkCloudLOGO2.png" alt="RikkaNas Logo" width="80" height="80">
       <h1>系统设置</h1>
       <p>个性化配置</p>
     </div>
@@ -17,10 +17,9 @@
           <h3>{{ sectionName }}</h3>
           <div v-for="(value, key) in sectionData" :key="key" class="setting-item">
             <div class="setting-label">
-              <span>{{ getLabelForKey(key) }}</span> <!-- 用户友好标签 -->
+              <span>{{ getLabelForKey(key) }}</span>
             </div>
             <div class="setting-control">
-              <!-- 如果key是可编辑的，显示输入框 -->
               <input
                   v-if="isEditableKey(key)"
                   type="text"
@@ -29,7 +28,6 @@
                   class="edit-input"
                   placeholder="输入新值"
               />
-              <!-- 否则，如果key不在排除列表中，显示开关 -->
               <label v-else-if="!isNoSwitchKey(key)" class="switch">
                 <input
                     type="checkbox"
@@ -38,11 +36,26 @@
                 />
                 <span class="slider"></span>
               </label>
-              <!-- 否则显示值文本 -->
               <span v-else class="value-text">{{ value }}</span>
             </div>
           </div>
         </div>
+
+        <!-- 管理员菜单 - 账户管理  -->
+        <div class="settings-section">
+          <h3>管理员中心</h3>
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>账户管理</span>
+            </div>
+            <div class="setting-control">
+              <button class="admin-btn-inside" @click="goToUserAdmin">
+                进入管理
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- 操作提示 -->
@@ -60,6 +73,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useIniConfigStore } from '@/stores/iniConfigStore';
+import { useRouter } from 'vue-router'
+
+// 路由
+const router = useRouter()
+const goToUserAdmin = () => {
+  router.push('/user-admin')
+}
 
 // 获取INI配置Store
 const configStore = useIniConfigStore();
@@ -67,27 +87,21 @@ const configStore = useIniConfigStore();
 const message = ref('');
 
 // 键值显示
-const noSwitchKeys = ['app_name', 'version']; // 只显示值
+const noSwitchKeys = ['app_name', 'version'];
+const editableKeys = ['device_name'];
 
-// 可直接编辑的键值列表
-const editableKeys = ['device_name']; // 显示输入框，可直接编辑
-
-// 判断是否为键值显示
 const isNoSwitchKey = (key) => {
   return noSwitchKeys.includes(key);
 };
 
-// 判断是否为可编辑的键值
 const isEditableKey = (key) => {
   return editableKeys.includes(key);
 };
 
-// 判断值是否为“开”（开关状态）
 const isOn = (value) => {
   return value === '开' || value === 'true';
 };
 
-// 获取用户友好标签（映射INI键为中文）
 const getLabelForKey = (key) => {
   const labelMap = {
     theme: '深色模式',
@@ -97,12 +111,10 @@ const getLabelForKey = (key) => {
     version: '版本号',
     device_name:'设备名',
     dark_mode:'深色模式',
-    // 添加更多映射
   };
-  return labelMap[key] || key; // 默认使用原键
+  return labelMap[key] || key;
 };
 
-// 更新值（输入框失去焦点时）
 const updateValue = async (section, key, event) => {
   const newValue = event.target.value.trim();
   if (newValue !== configStore.iniData[section][key]) {
@@ -119,7 +131,6 @@ const updateValue = async (section, key, event) => {
   }
 };
 
-// 切换开关（保存为“开”/“关”）
 const toggleSwitch = async (section, key, event) => {
   const newValue = event.target.checked ? '开' : '关';
   configStore.updateIniItem(section, key, newValue);
@@ -134,12 +145,11 @@ const toggleSwitch = async (section, key, event) => {
   }
 };
 
-// 重置设置（重置为默认，所有为“关”或指定）
 const resetSettings = async () => {
   configStore.iniData = {
-    Appearance: { theme: '关' }, // 深色模式关
-    Language: { language: '开' }, // 中文界面开
-    Notifications: { enabled: '开' }, // 通知开
+    Appearance: { theme: '关' },
+    Language: { language: '开' },
+    Notifications: { enabled: '开' },
   };
   try {
     await configStore.saveIniConfig();
@@ -151,7 +161,6 @@ const resetSettings = async () => {
   }
 };
 
-// 导出设置
 const exportSettings = () => {
   const settings = configStore.iniData;
   const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
@@ -165,7 +174,6 @@ const exportSettings = () => {
   setTimeout(() => message.value = '', 3000);
 };
 
-// 组件挂载时读取INI配置
 onMounted(async () => {
   try {
     await configStore.fetchIniConfig();
@@ -175,8 +183,8 @@ onMounted(async () => {
   }
 });
 </script>
+
 <style scoped>
-/* 基于Login.vue的风格 */
 .container {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 20px;
@@ -280,7 +288,6 @@ onMounted(async () => {
   align-items: center;
 }
 
-/* 拨杆开关样式 */
 .switch {
   position: relative;
   display: inline-block;
@@ -406,21 +413,17 @@ input:checked + .slider:before {
     border-radius: 15px;
     margin: 10px;
   }
-
   .settings-container {
     padding: 20px;
   }
-
   .header {
     padding: 20px;
   }
-
   .header h1 {
     font-size: 1.5rem;
   }
 }
 
-/* 样式与之前相同，添加.edit-input样式 */
 .edit-input {
   padding: 8px 12px;
   border: 2px solid #E0E0E0;
@@ -434,5 +437,17 @@ input:checked + .slider:before {
   border-color: #40007a;
 }
 
-/* 其余样式不变 */
+/*  账户管理按钮*/
+.admin-btn-inside {
+  padding: 6px 14px;
+  background: #40007a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.admin-btn-inside:hover {
+  background: #6800c1;
+}
 </style>

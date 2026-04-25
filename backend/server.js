@@ -98,6 +98,116 @@ app.get('/api/check-has-users', (req, res) => {
     });
 });
 
+
+// 用户列表（模糊查询）
+app.get('/api/admin/users', (req, res) => {
+    const { account, username, userrole, status } = req.query;
+    let sql = 'SELECT * FROM users WHERE 1=1';
+    const params = [];
+
+    // 账号模糊查询
+    if (account) {
+        sql += ' AND account LIKE ?';
+        params.push(`%${account}%`);
+    }
+    // 昵称模糊查询
+    if (username) {
+        sql += ' AND username LIKE ?';
+        params.push(`%${username}%`);
+    }
+    // 角色查询（只处理有效数字）
+    if (userrole && ['0', '1'].includes(userrole)) {
+        sql += ' AND userrole = ?';
+        params.push(userrole);
+    }
+    // 状态查询（只处理有效数字）
+    if (status && ['0', '1'].includes(status)) {
+        sql += ' AND status = ?';
+        params.push(status);
+    }
+    db.query(sql, params, (err, results) => {
+        if (err) return res.json({ success: false, error: err.message });
+        res.json({ success: true, data: results });
+    });
+});
+// 新增用户
+app.post('/api/admin/users/add', async (req, res) => {
+    const { account, password, username, device_name, userrole, storage_quota, status } = req.body;
+    const hashedPwd = await bcrypt.hash(password, 10);
+
+    const sql = `
+    INSERT INTO users (account, password, username, device_name, userrole, storage_quota, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+    const params = [account, hashedPwd, username, device_name, userrole, storage_quota, status];
+    db.query(sql, params, (err) => {
+        if (err) return res.json({ success: false, msg: err.message });
+        res.json({ success: true });
+    });
+});
+
+// 修改用户
+app.post('/api/admin/users/update', (req, res) => {
+    const { id, username, userrole, storage_quota, status, email } = req.body;
+    const sql = `
+    UPDATE users SET
+      username=?, userrole=?, storage_quota=?, status=?, email=?
+    WHERE id=?
+  `;
+    db.query(sql, [username, userrole, storage_quota, status, email, id], (err) => {
+        if (err) return res.json({ success: false });
+        res.json({ success: true });
+    });
+});
+
+// 重置密码
+app.post('/api/admin/users/reset-pwd', async (req, res) => {
+    const { id, password } = req.body;
+    const hashedPwd = await bcrypt.hash(password, 10);
+    db.query('UPDATE users SET password=? WHERE id=?', [hashedPwd, id], (err) => {
+        if (err) return res.json({ success: false });
+        res.json({ success: true });
+    });
+});
+
+// 删除用户 + 自动清理所有数据
+app.post('/api/admin/users/delete', async (req, res) => {
+    const { id } = req.body;
+
+    db.query('SELECT account FROM users WHERE id=?', [id], async (err, result) => {
+        if (err || result.length === 0) return res.json({ success: false });
+        const account = result[0].account;
+
+        // 删除用户目录
+        const userDir = path.join(STORAGE_ROOT, account);
+        await fs.rm(userDir, { recursive: true, force: true }).catch(() => {});
+
+        // 删除用户
+        db.query('DELETE FROM users WHERE id=?', [id], () => {
+            // 删除日志
+            db.query('DELETE FROM login_logs WHERE user_id=?', [id]);
+            db.query('DELETE FROM operation_logs WHERE user_id=?', [id]);
+            res.json({ success: true });
+        });
+    });
+});
+
+// 登录日志
+app.get('/api/admin/logs/login', (req, res) => {
+    db.query('SELECT * FROM login_logs ORDER BY id DESC', (err, data) => {
+        res.json({ success: true, data: err ? [] : data });
+    });
+});
+
+// 操作日志
+app.get('/api/admin/logs/operation', (req, res) => {
+    db.query('SELECT * FROM operation_logs ORDER BY id DESC', (err, data) => {
+        res.json({ success: true, data: err ? [] : data });
+    });
+});
+
+
 // 注册接口
 app.post('/api/register', async (req, res) => {
     try {
@@ -311,6 +421,40 @@ app.get('/api/share/:link', async (req, res) => {
     res.download(filePath);
 });
 
+// 创建共享
+app.post('/api/share/create', (req, res) => {
+    const { filePath, type, code, permission } = req.body;
+    const link = fileUtils.createShare(filePath, type, code, permission);
+    res.json({ success: true, link });
+});
+
+// 获取共享列表
+app.get('/api/share/list', (req, res) => {
+    res.json({ success: true, data: fileUtils.getShareList() });
+});
+
+// 取消共享
+app.post('/api/share/cancel', (req, res) => {
+    const { link } = req.body;
+    fileUtils.cancelShare(link);
+    res.json({ success: true });
+});
+
+// 获取共享详情
+app.post('/api/share/info', (req, res) => {
+    const { link } = req.body;
+    const share = fileUtils.getShareByLink(link);
+    if (!share) return res.json({ success: false });
+    res.json({ success: true, data: share });
+});
+
+// 访问共享（页面）
+app.get('/api/share/:link', (req, res) => {
+    const share = fileUtils.getShareByLink(req.params.link);
+    if (!share) return res.status(404).send('共享不存在或已取消');
+    share.views++;
+    res.download(fileUtils.safePath(share.filePath));
+});
 
 // 6. 获取共享记录
 app.get('/api/share/list', (req, res) => {

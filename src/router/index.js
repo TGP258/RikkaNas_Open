@@ -157,6 +157,11 @@
            name: 'PersonalCenter',
            component: () => import('@/components/PersonalCenter.vue')
        },
+       {
+           path: '/user-admin',
+           name: 'UserAdmin',
+           component: () => import('@/views/UserAdmin.vue')
+       }
        // 可以继续添加更多路由
    ]
 
