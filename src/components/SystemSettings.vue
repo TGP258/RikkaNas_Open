@@ -23,7 +23,7 @@
               <input
                   v-if="isEditableKey(key)"
                   type="text"
-                  :value="value"
+                  :value="key === 'device_ip' ? deviceIp : value"
                   @blur="updateValue(sectionName, key, $event)"
                   class="edit-input"
                   placeholder="输入新值"
@@ -37,6 +37,24 @@
                 <span class="slider"></span>
               </label>
               <span v-else class="value-text">{{ value }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 系统信息 -->
+        <div class="settings-section">
+          <h3>系统信息</h3>
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>设备IP</span>
+            </div>
+            <div class="setting-control">
+              <input
+                  v-model="deviceIp"
+                  type="text"
+                  class="edit-input"
+                  placeholder="输入IP地址"
+              />
             </div>
           </div>
         </div>
@@ -74,6 +92,7 @@
 import { ref, onMounted } from 'vue';
 import { useIniConfigStore } from '@/stores/iniConfigStore';
 import { useRouter } from 'vue-router'
+import { getLocalIp } from '@/api/fileApi'
 
 // 路由
 const router = useRouter()
@@ -85,10 +104,11 @@ const goToUserAdmin = () => {
 const configStore = useIniConfigStore();
 
 const message = ref('');
+const deviceIp = ref('');
 
 // 键值显示
 const noSwitchKeys = ['app_name', 'version'];
-const editableKeys = ['device_name'];
+const editableKeys = ['device_name', 'device_ip'];
 
 const isNoSwitchKey = (key) => {
   return noSwitchKeys.includes(key);
@@ -110,6 +130,7 @@ const getLabelForKey = (key) => {
     app_name: '系统版本',
     version: '版本号',
     device_name:'设备名',
+    device_ip: '设备IP',
     dark_mode:'深色模式',
   };
   return labelMap[key] || key;
@@ -117,6 +138,12 @@ const getLabelForKey = (key) => {
 
 const updateValue = async (section, key, event) => {
   const newValue = event.target.value.trim();
+  if (key === 'device_ip') {
+    deviceIp.value = newValue;
+    message.value = `设备IP 已更新为 ${newValue}`;
+    setTimeout(() => message.value = '', 3000);
+    return;
+  }
   if (newValue !== configStore.iniData[section][key]) {
     configStore.updateIniItem(section, key, newValue);
     try {
@@ -174,9 +201,23 @@ const exportSettings = () => {
   setTimeout(() => message.value = '', 3000);
 };
 
+const fetchDeviceIp = async () => {
+  try {
+    const response = await getLocalIp();
+    if (response.data.code === 200) {
+      deviceIp.value = response.data.data.ip;
+    } else {
+      deviceIp.value = '获取失败';
+    }
+  } catch (error) {
+    deviceIp.value = '获取失败';
+  }
+};
+
 onMounted(async () => {
   try {
     await configStore.fetchIniConfig();
+    await fetchDeviceIp();
   } catch (error) {
     message.value = `加载配置失败: ${error.message}`;
     setTimeout(() => message.value = '', 3000);

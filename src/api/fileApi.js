@@ -40,7 +40,6 @@ export const createFolder = (folderName, path = '') => {
 // ===== 升级：文件上传（支持文件夹） =====
 export const uploadFile = (files, path = '') => {
     const formData = new FormData();
-    // 支持多文件/文件夹上传
     for (const file of files) {
         formData.append('file', file);
     }
@@ -50,4 +49,9 @@ export const uploadFile = (files, path = '') => {
             'Content-Type': 'multipart/form-data'
         }
     });
+};
+
+// 获取本机局域网IP
+export const getLocalIp = () => {
+    return axios.get('/api/system/ip');
 };
