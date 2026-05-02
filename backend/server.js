@@ -171,7 +171,7 @@ app.post('/api/admin/users/reset-pwd', async (req, res) => {
     });
 });
 
-// 删除用户 + 自动清理所有数据
+// 删除用户 自动清理所有数据
 app.post('/api/admin/users/delete', async (req, res) => {
     const { id } = req.body;
 

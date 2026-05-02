@@ -6,18 +6,6 @@ const { v4: uuidv4 } = require('uuid');
 // 根目录（storage）
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
 
-// 1. 初始化storage目录（不存在则创建）
-// const initStorage = async () => {
-//     try {
-//         if (!fsSync.existsSync(STORAGE_ROOT)) {
-//             await fs.mkdir(STORAGE_ROOT, { recursive: true });
-//             console.log(`创建storage目录成功：${STORAGE_ROOT}`);
-//         }
-//         await initRecycle();
-//     } catch (error) {
-//         console.error('初始化storage目录失败：', error);
-//         throw error;
-//     }
 // };
 const initStorage = async () => {
     try {
@@ -26,7 +14,7 @@ const initStorage = async () => {
             console.log(`创建storage目录成功：${STORAGE_ROOT}`);
         }
 
-        // ✅ 直接在这里创建 recycle，不调用任何外部方法
+        //
         const RECYCLE_PATH = path.join(STORAGE_ROOT, 'recycle');
         if (!fsSync.existsSync(RECYCLE_PATH)) {
             await fs.mkdir(RECYCLE_PATH, { recursive: true });
@@ -38,7 +26,7 @@ const initStorage = async () => {
     }
 };
 
-// 2. 安全检查路径
+// 安全检查路径
 const safePath = (relativePath) => {
     const fullPath = path.resolve(STORAGE_ROOT, relativePath || '');
     if (!fullPath.startsWith(STORAGE_ROOT)) {
@@ -47,7 +35,7 @@ const safePath = (relativePath) => {
     return fullPath;
 };
 
-// 3. 获取目录文件列表
+// 获取目录文件列表
 const getFileList = async (relativePath = '') => {
     const fullPath = safePath(relativePath);
     try {
@@ -77,7 +65,7 @@ const getFileList = async (relativePath = '') => {
     }
 };
 
-// 4. 文件上传
+//  文件上传
 const uploadFile = async (file, relativePath = '') => {
     const fullDir = safePath(relativePath);
     const fileName = `${Date.now()}-${file.originalname}`;
@@ -91,7 +79,7 @@ const uploadFile = async (file, relativePath = '') => {
     }
 };
 
-// 5. 文件下载
+//  文件下载
 const downloadFile = async (relativePath) => {
     const fullPath = safePath(relativePath);
     try {
@@ -103,22 +91,7 @@ const downloadFile = async (relativePath) => {
     }
 };
 
-// // 6. 删除文件/文件夹
-// const deleteFile = async (relativePath) => {
-//     const fullPath = safePath(relativePath);
-//     try {
-//         const stats = await fs.stat(fullPath);
-//         if (stats.isDirectory()) {
-//             await fs.rm(fullPath, { recursive: true, force: true });
-//         } else {
-//             await fs.unlink(fullPath);
-//         }
-//         return true;
-//     } catch (error) {
-//         console.error('删除文件失败：', error);
-//         throw error;
-//     }
-// };
+// 删除文件/文件夹
 const deleteFile = async (relativePath) => {
     const fullPath = safePath(relativePath);
     const RECYCLE_PATH = path.join(STORAGE_ROOT, 'recycle');
@@ -142,7 +115,7 @@ const deleteFile = async (relativePath) => {
     }
 };
 
-// 7. 重命名
+// 重命名
 const renameFile = async (oldRelativePath, newName) => {
     const oldFullPath = safePath(oldRelativePath);
     const newFullPath = path.join(path.dirname(oldFullPath), newName);
@@ -158,7 +131,7 @@ const renameFile = async (oldRelativePath, newName) => {
     }
 };
 
-// 8. 复制
+//  复制
 const copyFile = async (sourceRelativePath, targetRelativePath) => {
     const sourceFullPath = safePath(sourceRelativePath);
     const targetFullPath = safePath(targetRelativePath);
@@ -176,7 +149,7 @@ const copyFile = async (sourceRelativePath, targetRelativePath) => {
     }
 };
 
-// 9. 移动
+// 移动
 const moveFile = async (sourceRelativePath, targetRelativePath) => {
     const sourceFullPath = safePath(sourceRelativePath);
     const targetFullPath = safePath(targetRelativePath);
@@ -189,7 +162,7 @@ const moveFile = async (sourceRelativePath, targetRelativePath) => {
     }
 };
 
-// 10. 搜索文件（支持AI jpg,png,gif）
+// 搜索文件（支持AI jpg,png,gif）
 const searchFiles = async (keyword, relativePath = '') => {
     const fullPath = safePath(relativePath);
     try {
@@ -277,7 +250,7 @@ const uploadFolder = async (files, relativePath = '') => {
     return results;
 };
 
-// ================== 回收站 ==================
+// 回收站
 const RECYCLE_PATH = path.join(STORAGE_ROOT, 'recycle');
 
 const getRecycleList = async () => {
@@ -314,7 +287,7 @@ const forceDelete = async (fileName) => {
         await fs.unlink(fullPath);
     }
 };
-// ================== 共享 ==================
+// 共享
 let shareList = [];
 
 function createShare(filePath, type = 'public', code = '', permission = 'read') {
@@ -345,7 +318,7 @@ function cancelShare(link) {
 }
 
 
-// ✅ 正确导出：所有方法只导出一次！！！
+// 所有方法导出
 module.exports = {
     initStorage,
     getFileList,

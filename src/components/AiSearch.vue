@@ -64,11 +64,8 @@ export default {
 
       try {
         const searchKeyword = await this.getKeywordFromAI(this.userInput)
-
-        console.log('=====================================')
         console.log('用户输入：', this.userInput)
         console.log('AI 模型返回关键词：', searchKeyword)
-        console.log('=====================================')
 
         const res = await axios.get("http://localhost:3000/api/files/search", {
           params: {
@@ -92,7 +89,7 @@ export default {
           method: 'POST',
           url: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
           headers: {
-            'Authorization': 'Bearer sk-',
+            'Authorization': 'Bearer sk用户自行添加',
             'Content-Type': 'application/json'
           },
           data: {

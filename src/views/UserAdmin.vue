@@ -163,7 +163,7 @@ const form = reactive({
 const load = async () => {
   try {
     const r = await axios.get('/api/admin/users', { params: s })
-    console.log('用户列表接口返回：', r.data) // 看控制台，确认数据有没有拿到
+    console.log('用户列表接口返回：', r.data) // 确认数据
     list.value = r.data.data
   } catch (e) {
     console.error('加载用户列表失败：', e)

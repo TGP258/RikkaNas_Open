@@ -75,40 +75,22 @@ const stats = ref([
   { value: '加载中...', label: '系统状态' }
 ]);
 
-// 菜单项配置（替换表情包为文字）
+// 菜单项配置
 const menuItems = ref([
   { id: 1, iconText: '文件', title: '文件管理', route: '/file-manager', description: '浏览、上传、下载和管理您的文件' },
   { id: 2, iconText: '设置', title: '系统设置', route: '/settings', description: '配置系统参数和网络设置' },
-  { id: 3, iconText: '硬盘', title: '硬盘管理', route: '/storage', description: '查看硬盘健康状态和RAID配置' },
   { id: 4, iconText: '设备', title: '设备信息', route: '/device-info', description: '查看硬件信息和系统状态' },
-  { id: 5, iconText: '备份', title: '备份与同步', route: '/backup', description: '设置自动备份任务和云同步' },
   { id: 6, iconText: 'AI', title: 'AI查询', route: '/ai-search', description: '智能查询文件' },
   { id: 7, iconText: '个人', title: '个人中心', route: '/personal', description: '管理个人信息' }
 ])
 
-// 快捷操作（替换表情包为文字）
-const quickActions = ref([
-  { id: 'upload', iconText: '上传', label: '快速上传' },
-  { id: 'backup', iconText: '备份', label: '立即备份' },
-  { id: 'scan', iconText: '扫描', label: '病毒扫描' },
-  { id: 'refresh', iconText: '刷新', label: '刷新状态' }
-])
 
 // 导航方法
 const navigateTo = (route) => {
   router.push(route)
 }
 
-// 快捷操作方法
-const quickAction = (action) => {
-  const actions = {
-    upload: () => router.push('/fileuploader'),
-    backup: () => alert('启动立即备份...'),
-    scan: () => alert('开始病毒扫描...'),
-    refresh: () => location.reload()
-  }
-  actions[action]?.()
-}
+
 
 // 登出方法
 const handleLogout = () => {

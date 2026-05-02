@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer'); // 处理文件上传，需安装：npm i multer
+const multer = require('multer'); // 处理文件上传
 const fileUtils = require('../utils/fileUtils');
 
-// 初始化multer（内存存储）
+// 初始化multer
 const upload = multer({ storage: multer.memoryStorage() });
 
 //  获取文件列表
@@ -17,21 +17,7 @@ router.get('/list', async (req, res) => {
     }
 });
 
-// 文件上传
-// router.post('/upload', upload.single('file'), async (req, res) => {
-//     try {
-//         if (!req.file) {
-//             return res.status(400).json({ success: false, error: '请选择要上传的文件' });
-//         }
-//         const { path = '' } = req.body;
-//         const result = await fileUtils.uploadFile(req.file, path);
-//         res.json({ success: true, data: result });
-//     } catch (error) {
-//         res.status(500).json({ success: false, error: error.message });
-//     }
-// });
-// ===== 升级：文件上传接口（支持文件夹上传） =====
-// 修改原有 upload.single 为 upload.array，支持多文件/文件夹上传
+
 router.post('/upload', upload.any(), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
@@ -152,7 +138,7 @@ router.get('/search', async (req, res) => {
     }
 });
 
-// ===== 新增：创建文件夹接口 =====
+// 创建文件夹接口
 router.post('/create-folder', async (req, res) => {
     try {
         const { folderName, path = '' } = req.body;
