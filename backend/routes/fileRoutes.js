@@ -1,12 +1,46 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer'); // 处理文件上传
+const multer = require('multer');
 const fileUtils = require('../utils/fileUtils');
 
-// 初始化multer
 const upload = multer({ storage: multer.memoryStorage() });
 
-//  获取文件列表
+// 解码文件名（前端传输时进行了 base64 编码）
+const decodeFileName = (fileName) => {
+    if (!fileName) return fileName;
+
+    try {
+        // 文件夹上传：__PATH__xxx__NAME__yyy
+        if (fileName.startsWith('__PATH__')) {
+            const pathMatch = fileName.match(/^__PATH__(.+)__NAME__(.+)$/);
+            if (pathMatch) {
+                const encodedPath = pathMatch[1];
+                const realFileName = pathMatch[2];
+                const decodedPath = Buffer.from(encodedPath, 'base64').toString('utf8');
+                return { relativePath: decodedPath, fileName: realFileName };
+            }
+        }
+
+        // 单文件上传：__NAME__xxx
+        if (fileName.startsWith('__NAME__')) {
+            const encoded = fileName.substring(8);
+            const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+            return { relativePath: '', fileName: decoded };
+        }
+    } catch (e) {
+        console.error('文件名解码失败:', e);
+    }
+
+    return { relativePath: '', fileName };
+};
+
+// 清理文件名（去掉 (数字) 格式的编号前缀）
+const cleanFileName = (fileName) => {
+    if (!fileName) return fileName;
+    return fileName.replace(/^\(\d+\)/, '');
+};
+
+// 获取文件列表
 router.get('/list', async (req, res) => {
     try {
         const { path = '' } = req.query;
@@ -17,14 +51,13 @@ router.get('/list', async (req, res) => {
     }
 });
 
-
 // 检查文件是否存在
 router.post('/check-exists', async (req, res) => {
     try {
         const { path, filename, md5 } = req.body;
         const exists = await fileUtils.checkFileExists(path, filename);
         const md5Exists = md5 ? await fileUtils.isMd5Exists(md5) : null;
-        
+
         res.json({
             success: true,
             data: {
@@ -38,35 +71,30 @@ router.post('/check-exists', async (req, res) => {
     }
 });
 
+// 上传文件
 router.post('/upload', upload.any(), async (req, res) => {
     try {
-        console.log('=== 进入上传接口 ===');
-        console.log('req.body.path:', req.body.path);
-        console.log('req.files 数量:', req.files ? req.files.length : 0);
-        if (req.files && req.files.length > 0) {
-            console.log('第一个文件的字段名:', req.files[0].fieldname);
-            console.log('第一个文件的 originalname:', req.files[0].originalname);
-            console.log('第一个文件的 webkitRelativePath:', req.files[0].webkitRelativePath);
-        }
-        
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({
                 success: false,
                 error: '请选择要上传的文件/文件夹'
             });
         }
+
+        // 解码所有文件名并清理编号前缀
+        req.files.forEach(file => {
+            const decoded = decodeFileName(file.originalname);
+            file.decodedFileName = cleanFileName(decoded.fileName);
+            file.decodedRelativePath = decoded.relativePath;
+        });
+
         const { path = '' } = req.body;
+        const isFolderUpload = req.files.some(file => file.decodedRelativePath);
 
         let result = [];
-        // 通过 originalname 是否包含编码的路径信息来判断是否是文件夹上传
-        const isFolderUpload = req.files.some(file => file.originalname.includes('__PATH__'));
-        console.log('isFolderUpload:', isFolderUpload);
-        
         if (isFolderUpload) {
-            // 处理文件夹上传
             result = await fileUtils.uploadFolder(req.files, path);
         } else {
-            // 处理单个/多个文件上传
             for (const file of req.files) {
                 const fileResult = await fileUtils.uploadFile(file, path);
                 result.push(fileResult);
@@ -79,19 +107,15 @@ router.post('/upload', upload.any(), async (req, res) => {
             message: `成功上传 ${result.length} 个文件/文件夹`
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-//  文件下载
+// 下载文件
 router.get('/download', async (req, res) => {
     try {
-        const { path } = req.query;
-        const fullPath = await fileUtils.downloadFile(path);
-        res.download(fullPath); // Express内置下载方法
+        const { path: filePath } = req.query;
+        await fileUtils.downloadFile(res, filePath);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -100,96 +124,74 @@ router.get('/download', async (req, res) => {
 // 删除文件/文件夹
 router.delete('/delete', async (req, res) => {
     try {
-        const { path } = req.body;
-        await fileUtils.deleteFile(path);
-        res.json({ success: true, message: '删除成功' });
+        const { path: filePath } = req.body;
+        const fullPath = fileUtils.safePath(filePath);
+        const fs = require('fs');
+        const isDirectory = fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory();
+
+        if (isDirectory) {
+            await fileUtils.deleteFolder(filePath);
+        } else {
+            await fileUtils.deleteFile(filePath);
+        }
+
+        res.json({ success: true, message: '已删除' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-//  重命名
+// 重命名文件/文件夹
 router.post('/rename', async (req, res) => {
     try {
         const { oldPath, newName } = req.body;
-        const result = await fileUtils.renameFile(oldPath, newName);
-        res.json({ success: true, data: result, message: '重命名成功' });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
+        const fullPath = fileUtils.safePath(oldPath);
+        const fs = require('fs');
+        const isDirectory = fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory();
 
-// 设置剪贴板（复制/剪切）
-router.post('/clipboard', async (req, res) => {
-    try {
-        const { type, path } = req.body; // type: copy/cut
-        const result = fileUtils.setClipboard(type, path);
-        res.json({ success: true, data: result });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 粘贴文件
-router.post('/paste', async (req, res) => {
-    try {
-        const { targetPath = '' } = req.body;
-        const clipboard = fileUtils.getClipboard();
-        if (!clipboard.type || !clipboard.path) {
-            return res.status(400).json({ success: false, error: '剪贴板为空' });
+        if (isDirectory) {
+            await fileUtils.renameFolder(oldPath, newName);
+        } else {
+            await fileUtils.renameFile(oldPath, newName);
         }
-        // 拼接目标路径
-        const sourceName = clipboard.path.split('/').pop();
-        const targetFullPath = `${targetPath}/${sourceName}`;
-        // 执行复制/剪切
-        if (clipboard.type === 'copy') {
-            await fileUtils.copyFile(clipboard.path, targetFullPath);
-        } else if (clipboard.type === 'cut') {
-            await fileUtils.moveFile(clipboard.path, targetFullPath);
-            // 剪切后清空剪贴板
-            fileUtils.setClipboard('', '');
-        }
-        res.json({ success: true, message: '粘贴成功' });
+
+        res.json({ success: true, message: '重命名成功' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// 搜索文件
-router.get('/search', async (req, res) => {
-    try {
-        const { keyword, path = '' } = req.query;
-        if (!keyword) {
-            return res.status(400).json({ success: false, error: '请输入搜索关键词' });
-        }
-        const result = await fileUtils.searchFiles(keyword, path);
-        res.json({ success: true, data: result });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 创建文件夹接口
+// 创建文件夹
 router.post('/create-folder', async (req, res) => {
     try {
         const { folderName, path = '' } = req.body;
-        if (!folderName) {
-            return res.status(400).json({
-                success: false,
-                error: '文件夹名称不能为空'
-            });
-        }
-        const result = await fileUtils.createFolder(folderName, path);
-        res.json({
-            success: true,
-            data: result,
-            message: '文件夹创建成功'
-        });
+        await fileUtils.createFolder(folderName, path);
+        res.json({ success: true, message: '文件夹创建成功' });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 });
+
+// 删除文件夹
+router.post('/delete-folder', async (req, res) => {
+    try {
+        const { path: folderPath } = req.body;
+        await fileUtils.deleteFolder(folderPath);
+        res.json({ success: true, message: '文件夹已删除' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 重命名文件夹
+router.post('/rename-folder', async (req, res) => {
+    try {
+        const { oldPath, newName } = req.body;
+        await fileUtils.renameFolder(oldPath, newName);
+        res.json({ success: true, message: '文件夹重命名成功' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

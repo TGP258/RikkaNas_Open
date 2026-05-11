@@ -57,7 +57,7 @@ db.connect((err) => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       device_name VARCHAR(255) NOT NULL,
       username VARCHAR(255) NOT NULL UNIQUE,
-      userrole INT, 
+      userrole INT,
       account VARCHAR(255) NOT NULL UNIQUE,
       password VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -273,15 +273,11 @@ app.post('/api/login', (req, res) => {
             return res.status(401).json({ error: '密码不正确' });
         }
 
-        // res.json({
-        //     message: '登录成功',
-        //     user: {
-        //         id: user.id,
-        //         username: user.username,
-        //         device_name: user.device_name,
-        //         account: user.account
-        //     }
-        // });
+        // 登录成功后释放保险库文件到storage
+        fileUtils.unlockAndRelease().then(() => {
+            // 同步storage到保险库
+            return fileUtils.syncStorageToVault();
+        }).catch(err => console.error('保险库操作失败:', err));
 
         //优化版本
         res.status(200).json({

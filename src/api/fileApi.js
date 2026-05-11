@@ -53,25 +53,33 @@ export const createFolder = (folderName, path = '') => {
     return apiClient.post('/api/files/create-folder', { folderName, path });
 };
 
-// 将路径编码为 base64，避免特殊字符问题
-const encodePath = (path) => {
-    return btoa(encodeURIComponent(path));
+// 将字符串编码为 base64
+const encodeFileName = (str) => {
+    const utf8Bytes = new TextEncoder().encode(str);
+    let binary = '';
+    utf8Bytes.forEach(byte => binary += String.fromCharCode(byte));
+    return btoa(binary);
 };
 
-// ===== 升级：文件上传（支持文件夹） =====
+// ===== 文件上传（支持文件夹） =====
 export const uploadFile = async (files, path = '') => {
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file.webkitRelativePath) {
-            // 使用 base64 编码路径，避免特殊字符问题
-            const encodedPath = encodePath(file.webkitRelativePath);
-            const encodedName = `__PATH__${encodedPath}__NAME__${file.name}`;
+            // 文件夹上传：编码webkitRelativePath，文件名用 __NAME__ 标记原始文件名
+            const encodedPath = encodeFileName(file.webkitRelativePath);
+            const finalName = `__PATH__${encodedPath}__NAME__${file.name}`;
             const fileContent = file.slice();
-            const fileWithPath = new File([fileContent], encodedName, { type: file.type });
+            const fileWithPath = new File([fileContent], finalName, { type: file.type });
             formData.append('file', fileWithPath);
         } else {
-            formData.append('file', file);
+            // 单文件上传：文件名用 __NAME__ 标记原始文件名
+            const encodedName = encodeFileName(file.name);
+            const finalName = `__NAME__${encodedName}`;
+            const fileContent = file.slice();
+            const fileWithName = new File([fileContent], finalName, { type: file.type });
+            formData.append('file', fileWithName);
         }
     }
     formData.append('path', path);
@@ -97,7 +105,7 @@ export const calculateFileMd5 = (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         const crypto = window.crypto || window.msCrypto;
-        
+
         reader.onload = (e) => {
             const arrayBuffer = e.target.result;
             crypto.subtle.digest('MD5', arrayBuffer).then((hash) => {
@@ -107,7 +115,7 @@ export const calculateFileMd5 = (file) => {
                 resolve(hexString);
             }).catch(reject);
         };
-        
+
         reader.onerror = reject;
         reader.readAsArrayBuffer(file);
     });
