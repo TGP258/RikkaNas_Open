@@ -20,6 +20,15 @@ router.get('/list', async (req, res) => {
 
 router.post('/upload', upload.any(), async (req, res) => {
     try {
+        console.log('=== 进入上传接口 ===');
+        console.log('req.body.path:', req.body.path);
+        console.log('req.files 数量:', req.files ? req.files.length : 0);
+        if (req.files && req.files.length > 0) {
+            console.log('第一个文件的字段名:', req.files[0].fieldname);
+            console.log('第一个文件的 originalname:', req.files[0].originalname);
+            console.log('第一个文件的 webkitRelativePath:', req.files[0].webkitRelativePath);
+        }
+        
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -29,8 +38,10 @@ router.post('/upload', upload.any(), async (req, res) => {
         const { path = '' } = req.body;
 
         let result = [];
-        // 通过 webkitRelativePath 判断是否是文件夹上传
-        const isFolderUpload = req.files.some(file => file.webkitRelativePath);
+        // 通过 originalname 是否包含编码的路径信息来判断是否是文件夹上传
+        const isFolderUpload = req.files.some(file => file.originalname.includes('__PATH__'));
+        console.log('isFolderUpload:', isFolderUpload);
+        
         if (isFolderUpload) {
             // 处理文件夹上传
             result = await fileUtils.uploadFolder(req.files, path);

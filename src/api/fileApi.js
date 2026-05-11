@@ -53,11 +53,26 @@ export const createFolder = (folderName, path = '') => {
     return apiClient.post('/api/files/create-folder', { folderName, path });
 };
 
+// 将路径编码为 base64，避免特殊字符问题
+const encodePath = (path) => {
+    return btoa(encodeURIComponent(path));
+};
+
 // ===== 升级：文件上传（支持文件夹） =====
-export const uploadFile = (files, path = '') => {
+export const uploadFile = async (files, path = '') => {
     const formData = new FormData();
-    for (const file of files) {
-        formData.append('file', file);
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.webkitRelativePath) {
+            // 使用 base64 编码路径，避免特殊字符问题
+            const encodedPath = encodePath(file.webkitRelativePath);
+            const encodedName = `__PATH__${encodedPath}__NAME__${file.name}`;
+            const fileContent = file.slice();
+            const fileWithPath = new File([fileContent], encodedName, { type: file.type });
+            formData.append('file', fileWithPath);
+        } else {
+            formData.append('file', file);
+        }
     }
     formData.append('path', path);
     return apiClient.post('/api/files/upload', formData, {

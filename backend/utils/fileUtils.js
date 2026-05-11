@@ -228,25 +228,101 @@ const createFolder = async (folderName, relativePath = '') => {
     }
 };
 
+// 解码 base64 编码的路径
+const decodePath = (encodedPath) => {
+    try {
+        return decodeURIComponent(Buffer.from(encodedPath, 'base64').toString('utf8'));
+    } catch (e) {
+        console.error('路径解码失败:', e);
+        return null;
+    }
+};
+
+// 从编码的文件名中提取相对路径和原始文件名
+const parseEncodedFilename = (originalname) => {
+    // 新格式: __PATH__{base64编码的路径}__NAME__{文件名}
+    const pathPattern = /__PATH__(.+?)__NAME__(.+)/;
+    const match = originalname.match(pathPattern);
+    if (match) {
+        const decodedPath = decodePath(match[1]);
+        if (decodedPath) {
+            return {
+                relativePath: decodedPath,
+                filename: match[2]
+            };
+        }
+    }
+    return null;
+};
+
 // 上传文件夹
 const uploadFolder = async (files, relativePath = '') => {
     const results = [];
-    for (const file of files) {
-        const fileRelativePath = file.webkitRelativePath || file.originalname;
-        const targetRelativePath = path.join(relativePath, fileRelativePath);
-        const fullFilePath = safePath(targetRelativePath);
-        const dirPath = path.dirname(fullFilePath);
-
-        if (!fsSync.existsSync(dirPath)) {
-            await fs.mkdir(dirPath, { recursive: true });
-        }
-
-        await fs.writeFile(fullFilePath, file.buffer);
-        results.push({
-            name: path.basename(fullFilePath),
-            path: path.relative(STORAGE_ROOT, fullFilePath)
-        });
+    
+    console.log('=== 文件夹上传调试 ===');
+    console.log('relativePath:', relativePath);
+    console.log('文件数量:', files.length);
+    if (files.length > 0) {
+        console.log('第一个文件的originalname:', files[0].originalname);
+        const parsed = parseEncodedFilename(files[0].originalname);
+        console.log('解析结果:', parsed);
     }
+    
+    for (const file of files) {
+        // 解析编码的文件名
+        const parsed = parseEncodedFilename(file.originalname);
+        
+        if (parsed) {
+            // 文件夹上传，使用解析出的相对路径
+            const fileRelativePath = parsed.relativePath.replace(/\\/g, '/');
+            const fileName = parsed.filename;
+            
+            console.log('处理文件:', fileName, '| 相对路径:', fileRelativePath);
+            
+            // 构建目标路径
+            let targetRelativePath;
+            if (relativePath) {
+                targetRelativePath = path.join(relativePath, fileRelativePath);
+            } else {
+                targetRelativePath = fileRelativePath;
+            }
+            
+            console.log('最终目标路径:', targetRelativePath);
+            
+            const fullFilePath = safePath(targetRelativePath);
+            const dirPath = path.dirname(fullFilePath);
+
+            if (!fsSync.existsSync(dirPath)) {
+                await fs.mkdir(dirPath, { recursive: true });
+            }
+
+            await fs.writeFile(fullFilePath, file.buffer);
+            results.push({
+                name: fileName,
+                path: path.relative(STORAGE_ROOT, fullFilePath)
+            });
+        } else {
+            // 普通文件上传
+            console.log('处理普通文件:', file.originalname);
+            const targetRelativePath = relativePath ? 
+                path.join(relativePath, file.originalname) : 
+                file.originalname;
+            
+            const fullFilePath = safePath(targetRelativePath);
+            const dirPath = path.dirname(fullFilePath);
+
+            if (!fsSync.existsSync(dirPath)) {
+                await fs.mkdir(dirPath, { recursive: true });
+            }
+
+            await fs.writeFile(fullFilePath, file.buffer);
+            results.push({
+                name: file.originalname,
+                path: path.relative(STORAGE_ROOT, fullFilePath)
+            });
+        }
+    }
+    console.log('=== 上传完成 ===');
     return results;
 };
 

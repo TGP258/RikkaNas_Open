@@ -354,6 +354,14 @@ const handleFolderUpload = (e) => {
   const files = Array.from(e.target.files);
   if (files.length === 0) return;
 
+  console.log('=== 前端文件夹上传调试 ===');
+  console.log('文件数量:', files.length);
+  if (files.length > 0) {
+    console.log('第一个文件:', files[0]);
+    console.log('webkitRelativePath:', files[0].webkitRelativePath);
+    console.log('originalname:', files[0].originalname);
+  }
+
   uploadFile(files, currentPath.value)
       .then(() => {
         const rootFolders = new Set(files.map(f => f.webkitRelativePath.split('/')[0]));
