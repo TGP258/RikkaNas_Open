@@ -137,6 +137,13 @@
 import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
 
+// 获取后端URL
+const getBackendUrl = () => {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3000`;
+};
+
 const list = ref([])
 const loginLogs = ref([])
 const operLogs = ref([])
@@ -162,7 +169,7 @@ const form = reactive({
 
 const load = async () => {
   try {
-    const r = await axios.get('/api/admin/users', { params: s })
+    const r = await axios.get(`${getBackendUrl()}/api/admin/users`, { params: s })
     console.log('用户列表接口返回：', r.data) // 确认数据
     list.value = r.data.data
   } catch (e) {
@@ -170,8 +177,8 @@ const load = async () => {
   }
 }
 const loadLogs = async () => {
-  const a = await axios.get('/api/admin/logs/login')
-  const b = await axios.get('/api/admin/logs/operation')
+  const a = await axios.get(`${getBackendUrl()}/api/admin/logs/login`)
+  const b = await axios.get(`${getBackendUrl()}/api/admin/logs/operation`)
   loginLogs.value = a.data.data
   operLogs.value = b.data.data
 }
@@ -203,7 +210,7 @@ const openResetPwd = (u) => {
 const addUser = async () => {
   const f = { ...form }
   f.storage_quota = f.storage_quota * 1024 * 1024 * 1024
-  await axios.post('/api/admin/users/add', f)
+  await axios.post(`${getBackendUrl()}/api/admin/users/add`, f)
   addShow.value = false
   load()
 }
@@ -211,19 +218,19 @@ const addUser = async () => {
 const editUser = async () => {
   const f = { ...form }
   f.storage_quota = f.storage_quota * 1024 * 1024 * 1024
-  await axios.post('/api/admin/users/update', f)
+  await axios.post(`${getBackendUrl()}/api/admin/users/update`, f)
   editShow.value = false
   load()
 }
 
 const resetPwd = async () => {
-  await axios.post('/api/admin/users/reset-pwd', { id: form.id, password: newPwd.value })
+  await axios.post(`${getBackendUrl()}/api/admin/users/reset-pwd`, { id: form.id, password: newPwd.value })
   resetPwdShow.value = false
 }
 
 const doDelete = async (u) => {
   if (!confirm('确定删除？将删除该用户所有数据')) return
-  await axios.post('/api/admin/users/delete', { id: u.id })
+  await axios.post(`${getBackendUrl()}/api/admin/users/delete`, { id: u.id })
   load()
 }
 

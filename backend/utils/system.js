@@ -68,10 +68,31 @@ router.get('/ip', async (req, res) => {
 router.get('/stats', async (req, res) => {
     try {
         const diskInfo = await si.fsSize();
-        const mainDisk = diskInfo[0];
-        const totalStorage = (mainDisk.size / (1024 ** 3)).toFixed(1) + 'GB';//这个地方计划接入user_settings ,可变单位
-        const usedStorage = (mainDisk.used / (1024 ** 3)).toFixed(1) + 'GB';
-        const usageRate = ((mainDisk.used / mainDisk.size) * 100).toFixed(0) + '%';
+        const cpuInfo = await si.cpu();
+        const osInfo = await si.osInfo();
+        
+        const disks = diskInfo.map(disk => ({
+            mount: disk.mount,
+            fs: disk.fs,
+            type: disk.type,
+            size: (disk.size / (1024 ** 3)).toFixed(1) + 'GB',
+            used: (disk.used / (1024 ** 3)).toFixed(1) + 'GB',
+            available: (disk.available / (1024 ** 3)).toFixed(1) + 'GB',
+            usePercent: disk.use.toFixed(1) + '%',
+            useValue: disk.use
+        }));
+
+        // 计算所有磁盘总容量和已用空间
+        let totalBytes = 0;
+        let usedBytes = 0;
+        diskInfo.forEach(disk => {
+            totalBytes += disk.size;
+            usedBytes += disk.used;
+        });
+        
+        const totalStorage = (totalBytes / (1024 ** 3)).toFixed(1) + 'GB';
+        const usedStorage = (usedBytes / (1024 ** 3)).toFixed(1) + 'GB';
+        const usageRate = totalBytes > 0 ? ((usedBytes / totalBytes) * 100).toFixed(0) + '%' : '0%';
         const systemStatus = '在线';
 
         const systemStats = [
@@ -81,7 +102,26 @@ router.get('/stats', async (req, res) => {
             { value: systemStatus, label: '系统状态' }
         ];
 
-        res.json({ code: 200, data: systemStats, msg: '获取系统信息成功' });
+        // 修复Windows系统名称乱码
+        let osName = osInfo.distro || 'Unknown';
+        let osType = osInfo.platform || 'Unknown';
+        
+        if (osType.toLowerCase().includes('win')) {
+            osType = 'Windows';
+            osName = 'Windows ' + (osInfo.release || '');
+        }
+        
+        const systemDetails = {
+            osType: osType,
+            osName: osName,
+            osVersion: osInfo.release || '',
+            cpuModel: cpuInfo.manufacturer + ' ' + cpuInfo.brand,
+            cpuCores: cpuInfo.cores,
+            cpuThreads: cpuInfo.cores,
+            hostname: osInfo.hostname
+        };
+
+        res.json({ code: 200, data: systemStats, disks: disks, details: systemDetails, msg: '获取系统信息成功' });
     } catch (error) {
         console.error('获取系统信息失败：', error);
         res.json({ code: 500, data: null, msg: '获取系统信息失败' });

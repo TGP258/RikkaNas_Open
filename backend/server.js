@@ -471,6 +471,6 @@ app.post('/api/share/cancel', (req, res) => {
 
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('服务器运行在端口' + PORT);
 });

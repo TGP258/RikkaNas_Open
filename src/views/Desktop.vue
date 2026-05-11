@@ -52,9 +52,16 @@ import AppFooter from '../components/AppFooter.vue';
 const router = useRouter()
 const userName = ref('');
 
+// 获取后端URL
+const getBackendUrl = () => {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3000`;
+};
+
 const fetchAdminInfo = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/admin/info');
+    const response = await axios.get(`${getBackendUrl()}/api/admin/info`);
     userName.value = response.data.name;
   } catch (error) {
     console.error('获取管理员信息失败:', error);
@@ -101,7 +108,7 @@ const handleLogout = () => {
 
 onMounted(async () => {
   try {
-    const response = await axios.get('/api/system/stats');
+    const response = await axios.get(`${getBackendUrl()}/api/system/stats`);
     if (response.data.code === 200) {
       stats.value = response.data.data;
     }

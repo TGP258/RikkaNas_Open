@@ -90,8 +90,15 @@ const registerForm = ref({
   confirmPassword: ''
 })
 
+// 获取后端URL
+const getBackendUrl = () => {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3000`;
+};
+
 // API基础URL
-const API_BASE = 'http://localhost:3000/api'
+const API_BASE = `${getBackendUrl()}/api`;
 
 // 切换标签页
 const switchTab = (tabName) => {

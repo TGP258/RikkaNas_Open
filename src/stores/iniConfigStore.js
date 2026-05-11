@@ -3,6 +3,22 @@ import { defineStore } from 'pinia';
 import { reactive } from 'vue';
 import axios from 'axios';
 
+// 获取后端URL
+const getBackendUrl = () => {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:3000`;
+};
+
+// 创建axios实例
+const apiClient = axios.create({
+    baseURL: getBackendUrl(),
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
+
 // 定义全局INI配置Store
 export const useIniConfigStore = defineStore('iniConfig', {
     state: () => ({
@@ -30,7 +46,7 @@ export const useIniConfigStore = defineStore('iniConfig', {
             this.errorMsg = '';
             try {
                 // 调用后端接口，获取INI文件内容
-                const response = await axios.get('/api/ini/read', {
+                const response = await apiClient.get('/api/ini/read', {
                     params: { path: iniPath } // 传递INI文件路径
                 });
                 const iniContent = response.data.content;
@@ -111,7 +127,7 @@ export const useIniConfigStore = defineStore('iniConfig', {
                 // 序列化全局配置为INI字符串
                 const iniContent = this.serializeIniData();
                 // 调用后端接口保存文件
-                await axios.post('/api/ini/save', {
+                await apiClient.post('/api/ini/save', {
                     path: iniPath,
                     content: iniContent
                 });
