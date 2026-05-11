@@ -18,6 +18,26 @@ router.get('/list', async (req, res) => {
 });
 
 
+// 检查文件是否存在
+router.post('/check-exists', async (req, res) => {
+    try {
+        const { path, filename, md5 } = req.body;
+        const exists = await fileUtils.checkFileExists(path, filename);
+        const md5Exists = md5 ? await fileUtils.isMd5Exists(md5) : null;
+        
+        res.json({
+            success: true,
+            data: {
+                exists,
+                md5Exists,
+                existingPath: exists ? fileUtils.safePath(path ? `${path}/${filename}` : filename) : null
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 router.post('/upload', upload.any(), async (req, res) => {
     try {
         console.log('=== 进入上传接口 ===');

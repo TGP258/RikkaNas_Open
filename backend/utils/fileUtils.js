@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { isMd5Exists } = require('./md5Check');
 
 // 根目录（storage）
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
@@ -33,6 +34,12 @@ const safePath = (relativePath) => {
         throw new Error('非法路径，禁止访问');
     }
     return fullPath;
+};
+
+// 检查文件是否存在
+const checkFileExists = async (basePath, filename) => {
+    const fullPath = safePath(basePath ? `${basePath}/${filename}` : filename);
+    return fsSync.existsSync(fullPath);
 };
 
 // 获取目录文件列表
@@ -68,7 +75,7 @@ const getFileList = async (relativePath = '') => {
 //  文件上传
 const uploadFile = async (file, relativePath = '') => {
     const fullDir = safePath(relativePath);
-    const fileName = `${Date.now()}-${file.originalname}`;
+    const fileName = file.originalname;
     const fullPath = path.join(fullDir, fileName);
     try {
         await fs.writeFile(fullPath, file.buffer);
@@ -417,5 +424,7 @@ module.exports = {
     getShareList,
     cancelShare,
     getShareByLink,
+    checkFileExists,
+    isMd5Exists,
 
 };

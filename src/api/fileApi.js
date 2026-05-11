@@ -86,3 +86,29 @@ export const uploadFile = async (files, path = '') => {
 export const getLocalIp = () => {
     return apiClient.get('/api/system/ip');
 };
+
+// 检查文件是否存在
+export const checkFileExists = (path, filename, md5 = null) => {
+    return apiClient.post('/api/files/check-exists', { path, filename, md5 });
+};
+
+// 计算文件MD5值
+export const calculateFileMd5 = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        const crypto = window.crypto || window.msCrypto;
+        
+        reader.onload = (e) => {
+            const arrayBuffer = e.target.result;
+            crypto.subtle.digest('MD5', arrayBuffer).then((hash) => {
+                const hexString = Array.from(new Uint8Array(hash))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+                resolve(hexString);
+            }).catch(reject);
+        };
+        
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
+};

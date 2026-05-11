@@ -194,6 +194,28 @@
         </div>
       </div>
     </div>
+
+    <!-- 上传确认弹窗 -->
+    <div v-if="uploadConfirmModal" class="modal">
+      <div class="modal-content">
+        <h3>文件上传确认</h3>
+        <div class="upload-conflict-info">
+          <p v-if="uploadConflictMd5">
+            <span class="warning-icon">⚠️</span>
+            <span>检测到相同内容的文件已存在（MD5重复）</span>
+          </p>
+          <p v-else>
+            <span class="warning-icon">⚠️</span>
+            <span>文件 "<strong>{{ uploadConflictFile?.name }}</strong>" 已存在</span>
+          </p>
+        </div>
+        <div class="modal-btns upload-btns">
+          <button class="btn danger-btn" @click="handleUploadConfirm('overwrite')">覆盖</button>
+          <button class="btn primary-btn" @click="handleUploadConfirm('rename')">自动重命名</button>
+          <button class="btn default-btn" @click="handleUploadConfirm('skip')">跳过</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -202,7 +224,7 @@ import { ref, reactive, onMounted, watch } from 'vue';
 import {
   getFileList, uploadFile, downloadFile, deleteFile,
   renameFile, setClipboard, pasteFile, searchFiles,
-  createFolder
+  createFolder, checkFileExists, calculateFileMd5
 } from '@/api/fileApi';
 import axios from 'axios';
 
@@ -212,6 +234,14 @@ const shareType = ref('public');
 const shareCode = ref('');
 const sharePermission = ref('read');
 const shareLink = ref('');
+
+// 上传确认弹窗状态
+const uploadConfirmModal = ref(false);
+const uploadConflictFile = ref(null);
+const uploadConflictMd5 = ref(false);
+const uploadAction = ref(''); // 'overwrite', 'rename', 'skip'
+const uploadPendingFiles = ref([]);
+const uploadCurrentPath = ref('');
 
 // 打开共享弹窗
 const handleShare = () => {
@@ -334,19 +364,118 @@ const triggerFolderInput = () => {
 };
 
 // 处理文件上传
-const handleFileUpload = (e) => {
+// 生成自动重命名的文件名
+const generateRename = (filename) => {
+  const dotIndex = filename.lastIndexOf('.');
+  if (dotIndex === -1) {
+    return `${filename}(1)`;
+  }
+  const name = filename.substring(0, dotIndex);
+  const ext = filename.substring(dotIndex);
+  return `${name}(1)${ext}`;
+};
+
+// 处理文件上传
+const handleFileUpload = async (e) => {
   const files = Array.from(e.target.files);
   if (files.length === 0) return;
 
-  uploadFile(files, currentPath.value)
-      .then(() => {
-        showToast(`成功上传 ${files.length} 个文件`);
-        loadFileList(currentPath.value);
-        e.target.value = '';
-      })
-      .catch(error => {
-        showToast(error.response?.data?.error || '文件上传失败', 'error');
-      });
+  uploadPendingFiles.value = files;
+  uploadCurrentPath.value = currentPath.value;
+  
+  // 逐个检查文件
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    
+    // 计算MD5
+    let md5 = null;
+    try {
+      md5 = await calculateFileMd5(file);
+    } catch (err) {
+      console.warn('计算MD5失败:', err);
+    }
+    
+    // 检查文件是否存在
+    const checkResult = await checkFileExists(currentPath.value, file.name, md5);
+    const { exists, md5Exists } = checkResult.data.data;
+    
+    if (exists || md5Exists) {
+      uploadConflictFile.value = file;
+      uploadConflictMd5.value = md5Exists && !exists;
+      uploadConfirmModal.value = true;
+      return;
+    }
+  }
+  
+  // 没有冲突，直接上传
+  await doUpload(files, currentPath.value);
+  e.target.value = '';
+};
+
+// 执行上传
+const doUpload = async (files, path) => {
+  try {
+    await uploadFile(files, path);
+    showToast(`成功上传 ${files.length} 个文件`);
+    loadFileList(path);
+  } catch (error) {
+    showToast(error.response?.data?.error || '文件上传失败', 'error');
+  }
+};
+
+// 处理上传确认
+const handleUploadConfirm = async (action) => {
+  uploadConfirmModal.value = false;
+  
+  if (action === 'skip') {
+    // 跳过当前文件，继续处理剩余文件
+    const currentIndex = uploadPendingFiles.value.findIndex(f => f.name === uploadConflictFile.value.name);
+    const remainingFiles = uploadPendingFiles.value.slice(currentIndex + 1);
+    
+    if (remainingFiles.length > 0) {
+      uploadPendingFiles.value = remainingFiles;
+      // 继续检查剩余文件
+      for (let i = 0; i < remainingFiles.length; i++) {
+        const file = remainingFiles[i];
+        let md5 = null;
+        try {
+          md5 = await calculateFileMd5(file);
+        } catch (err) {}
+        
+        const checkResult = await checkFileExists(uploadCurrentPath.value, file.name, md5);
+        const { exists, md5Exists } = checkResult.data.data;
+        
+        if (exists || md5Exists) {
+          uploadConflictFile.value = file;
+          uploadConflictMd5.value = md5Exists && !exists;
+          uploadConfirmModal.value = true;
+          return;
+        }
+      }
+      await doUpload(remainingFiles, uploadCurrentPath.value);
+    }
+    return;
+  }
+  
+  const currentFile = uploadConflictFile.value;
+  const currentIndex = uploadPendingFiles.value.findIndex(f => f.name === currentFile.name);
+  const remainingFiles = uploadPendingFiles.value.slice(currentIndex + 1);
+  
+  if (action === 'overwrite') {
+    // 覆盖上传
+    await doUpload([currentFile], uploadCurrentPath.value);
+  } else if (action === 'rename') {
+    // 自动重命名
+    const newName = generateRename(currentFile.name);
+    // 创建重命名后的文件对象
+    const renamedFile = new File([currentFile], newName, { type: currentFile.type });
+    await doUpload([renamedFile], uploadCurrentPath.value);
+  }
+  
+  // 继续处理剩余文件
+  if (remainingFiles.length > 0) {
+    await doUpload(remainingFiles, uploadCurrentPath.value);
+  }
 };
 
 // 处理文件夹上传
