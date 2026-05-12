@@ -2,18 +2,13 @@
   <div class="ini-editor-container">
     <h2>系统设置</h2>
 
-    <!-- 加载/错误提示 -->
     <div v-if="configStore.isLoading" class="tip loading-tip">正在读取配置...</div>
     <div v-if="configStore.errorMsg" class="tip error-tip">{{ configStore.errorMsg }}</div>
 
-    <!-- INI编辑区域 -->
     <div class="edit-area">
-      <!-- 新增分组按钮 -->
       <button @click="addNewSection" class="btn add-section-btn">+ 新增分组</button>
 
-      <!-- 分组列表：遍历iniData，sectionKey为只读变量 -->
       <div v-for="(section, sectionKey) in configStore.iniData" :key="sectionKey" class="section-card">
-        <!-- 分组头部：已修正sectionKey的绑定 -->
         <div class="section-header">
           <input
               :value="sectionKey"
@@ -30,7 +25,6 @@
           </button>
         </div>
 
-        <!-- 键值对列表：key和value均为只读变量，全部改用:value + 事件 -->
         <div class="key-value-list">
           <div
               v-for="(value, key) in section"
@@ -44,7 +38,6 @@
                 placeholder="键名"
             />
             <span class="equal-sign">=</span>
-            <!-- 修正：value输入框移除v-model，改用:value + @input/@blur -->
             <input
                 :value="value"
                 @input="handleValueInput(sectionKey, key, $event)"
@@ -60,16 +53,13 @@
           </div>
         </div>
 
-        <!-- 新增键值对按钮 -->
         <button @click="addNewKeyValue(sectionKey)" class="btn add-kv-btn">+ 新增键值对</button>
       </div>
     </div>
 
-    <!-- 操作按钮 -->
     <div class="action-area">
       <button @click="refreshIniConfig" class="btn refresh-btn">刷新配置（从服务器读取）</button>
       <button @click="saveIniConfig" class="btn save-btn" :disabled="configStore.isLoading">保存配置到服务器</button>
-<!--      <button @click="resetEditor" class="btn reset-btn">重置编辑器</button>-->
     </div>
   </div>
 </template>
@@ -78,17 +68,10 @@
 import { useIniConfigStore } from '@/stores/iniConfigStore';
 import { onMounted } from 'vue';
 
-// 获取全局INI配置Store
 const configStore = useIniConfigStore();
 
-/**
- * 分组名失焦事件：更新分组名
- * @param {string} oldSectionKey 旧分组名
- * @param {Event} e 失焦事件
- */
 const handleSectionKeyBlur = (oldSectionKey, e) => {
   const newSectionKey = e.target.value.trim();
-  // 校验逻辑
   if (!newSectionKey || newSectionKey === oldSectionKey) return;
   if (configStore.iniData[newSectionKey]) {
     alert(`分组名「${newSectionKey}」已存在！`);
@@ -96,25 +79,16 @@ const handleSectionKeyBlur = (oldSectionKey, e) => {
     return;
   }
 
-  // 手动更新分组名（复制旧数据 → 删除旧键 → 新增新键）
   configStore.iniData[newSectionKey] = { ...configStore.iniData[oldSectionKey] };
   delete configStore.iniData[oldSectionKey];
 };
 
-/**
- * 键名失焦事件：更新键名
- * @param {string} sectionKey 分组名
- * @param {string} oldKey 旧键名
- * @param {Event} e 失焦事件
- * @param {string} type 类型：key
- */
 const handleKeyValueBlur = (sectionKey, oldKey, e, type) => {
   if (type !== 'key') return;
   const newKey = e.target.value.trim();
   const section = configStore.iniData[sectionKey];
   if (!section) return;
 
-  // 校验逻辑
   if (!newKey || newKey === oldKey) return;
   if (section[newKey]) {
     alert(`键名「${newKey}」已存在！`);
@@ -122,33 +96,19 @@ const handleKeyValueBlur = (sectionKey, oldKey, e, type) => {
     return;
   }
 
-  // 手动更新键名
   section[newKey] = section[oldKey];
   delete section[oldKey];
 };
 
-/**
- * 键值输入事件：实时更新键值（核心：通过sectionKey + key定位属性）
- * @param {string} sectionKey 分组名
- * @param {string} key 键名
- * @param {Event} e 输入事件
- */
 const handleValueInput = (sectionKey, key, e) => {
   const newValue = e.target.value.trim();
-  // 精准定位到对应属性，手动赋值更新（绕开v-for只读变量）
   configStore.iniData[sectionKey][key] = newValue;
 };
 
-/**
- * 从服务器刷新配置
- */
 const refreshIniConfig = () => {
   configStore.fetchIniConfig();
 };
 
-/**
- * 新增分组
- */
 const addNewSection = () => {
   let newSectionName = `NEW_SECTION_${Object.keys(configStore.iniData).length + 1}`;
   while (configStore.iniData[newSectionName]) {
@@ -157,10 +117,6 @@ const addNewSection = () => {
   configStore.iniData[newSectionName] = {};
 };
 
-/**
- * 删除分组
- * @param {string} sectionKey 分组名
- */
 const deleteSection = (sectionKey) => {
   if (Object.keys(configStore.iniData).length <= 1) {
     alert('至少保留一个分组！');
@@ -169,10 +125,6 @@ const deleteSection = (sectionKey) => {
   delete configStore.iniData[sectionKey];
 };
 
-/**
- * 新增键值对
- * @param {string} sectionKey 分组名
- */
 const addNewKeyValue = (sectionKey) => {
   const section = configStore.iniData[sectionKey];
   if (!section) return;
@@ -183,25 +135,14 @@ const addNewKeyValue = (sectionKey) => {
   section[newKey] = '';
 };
 
-/**
- * 删除键值对
- * @param {string} sectionKey 分组名
- * @param {string} key 键名
- */
 const deleteKeyValue = (sectionKey, key) => {
   delete configStore.iniData[sectionKey][key];
 };
 
-/**
- * 保存配置到服务器
- */
 const saveIniConfig = () => {
   configStore.saveIniConfig();
 };
 
-/**
- * 重置编辑器
- */
 const resetEditor = () => {
   Object.keys(configStore.iniData).forEach(key => delete configStore.iniData[key]);
   configStore.iniData.DEFAULT = {
@@ -213,14 +154,12 @@ const resetEditor = () => {
   alert('编辑器已重置！');
 };
 
-// 组件挂载时自动读取配置
 onMounted(() => {
   refreshIniConfig();
 });
 </script>
 
 <style scoped>
-/* 样式与之前一致，无需修改 */
 .ini-editor-container {
   max-width: 1000px;
   margin: 20px auto;
@@ -415,28 +354,24 @@ onMounted(() => {
   background-color: #546e7a;
 }
 
-/* 引入Material Design字体和图标（在index.html或main.js中添加） */
-/* <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> */
-/* <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> */
-
 .ini-editor-container {
   max-width: 1200px;
   margin: 20px auto;
   padding: 24px;
-  font-family: 'Roboto', sans-serif; /* Material Design推荐字体 */
-  background: #F3E5F5; /* 浅紫背景 */
-  border-radius: 16px; /* Material圆角 */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Material阴影 */
+  font-family: 'Roboto', sans-serif;
+  background: #F3E5F5;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   color: #333;
 }
 
 h2 {
   text-align: center;
-  color: #6200EE; /* 主紫色 */
+  color: #6200EE;
   font-size: 28px;
   font-weight: 500;
   margin-bottom: 16px;
-  letter-spacing: 0.5px; /* Material字间距 */
+  letter-spacing: 0.5px;
 }
 
 .tip {
@@ -445,7 +380,7 @@ h2 {
   margin-bottom: 24px;
   text-align: center;
   font-weight: 400;
-  animation: fadeIn 0.3s ease-out; /* Material动画 */
+  animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
@@ -454,13 +389,13 @@ h2 {
 }
 
 .loading-tip {
-  background: #E8EAF6; /* 浅紫提示 */
+  background: #E8EAF6;
   color: #6200EE;
   border-left: 4px solid #6200EE;
 }
 
 .error-tip {
-  background: #FFEBEE; /* 错误用红色，但保持紫色主题一致 */
+  background: #FFEBEE;
   color: #D32F2F;
   border-left: 4px solid #D32F2F;
 }
@@ -468,16 +403,16 @@ h2 {
 .btn {
   padding: 12px 24px;
   border: none;
-  border-radius: 8px; /* Material按钮圆角 */
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Material过渡曲线 */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   margin-right: 8px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Elevated button阴影 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   position: relative;
   overflow: hidden;
 }
@@ -497,7 +432,7 @@ h2 {
 
 .btn:hover::before {
   width: 300px;
-  height: 300px; /* Ripple effect模拟 */
+  height: 300px;
 }
 
 .btn:hover {
@@ -505,18 +440,18 @@ h2 {
 }
 
 .refresh-btn {
-  background: #6200EE; /* 主紫色 */
+  background: #6200EE;
   color: white;
 }
 
 .refresh-btn::after {
-  content: 'refresh'; /* Material Icon */
+  content: 'refresh';
   font-family: 'Material Icons';
   font-size: 18px;
 }
 
 .save-btn {
-  background: #BB86FC; /* 辅助紫色 */
+  background: #BB86FC;
   color: #333;
 }
 
@@ -534,7 +469,7 @@ h2 {
 }
 
 .add-section-btn, .add-kv-btn {
-  background: #9C27B0; /* 深紫 */
+  background: #9C27B0;
   color: white;
 }
 
@@ -551,7 +486,7 @@ h2 {
 }
 
 .delete-btn, .delete-kv-btn {
-  background: #F44336; /* 红色，用于删除 */
+  background: #F44336;
   color: white;
 }
 
@@ -575,7 +510,7 @@ h2 {
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Material卡片阴影 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #E0E0E0;
   transition: box-shadow 0.2s ease;
 }
@@ -606,7 +541,7 @@ h2 {
 
 .section-name-input:focus {
   border-color: #6200EE;
-  box-shadow: 0 0 0 3px rgba(98, 0, 238, 0.1); /* Material焦点环 */
+  box-shadow: 0 0 0 3px rgba(98, 0, 238, 0.1);
 }
 
 .key-value-list {

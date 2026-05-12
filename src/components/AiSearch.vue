@@ -85,11 +85,22 @@ export default {
 
     async getKeywordFromAI(userText) {
       try {
+        const apiKey = localStorage.getItem('ai_api_key') || ''
+        console.log('=== AiSearch API密钥读取调试 ===')
+        console.log('从localStorage读取的密钥:', apiKey)
+        console.log('密钥长度:', apiKey.length)
+        console.log('密钥前10位:', apiKey.substring(0, 10) + '...')
+        console.log('================================')
+        if (!apiKey) {
+          alert('请先在系统设置中配置 API 密钥')
+          return userText
+        }
+
         const response = await axios({
           method: 'POST',
           url: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
           headers: {
-            'Authorization': 'Bearer sk用户自行添加',
+            'Authorization': 'Bearer ' + apiKey,
             'Content-Type': 'application/json'
           },
           data: {
