@@ -17,6 +17,7 @@
     "multer": "^2.0.2",
     "mysql2": "^3.14.5",
     "systeminformation": "^5.28.9",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "webdav-serve": "^1.0.6"
   }
 }
