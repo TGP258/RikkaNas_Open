@@ -276,7 +276,7 @@ const downloadFile = async (req, res, filePath) => {
             }
             
             const chunksize = (end - start) + 1;
-            const file = fs.createReadStream(fullPath, { start, end });
+            const file = fsSync.createReadStream(fullPath, { start, end });
             
             res.status(206); // Partial Content
             res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
