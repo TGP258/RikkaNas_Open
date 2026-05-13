@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DECO*27 Personality Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #121212;
+        }
+
+        .gradient-circle-1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 65%;
+            height: 40%;
+            background: radial-gradient(circle, rgba(0, 120, 100, 0.6) 0%, rgba(0, 60, 50, 0.3) 100%);
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.7;
+        }
+
+        .gradient-circle-2 {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 70%;
+            height: 55%;
+            background: radial-gradient(circle, rgba(0, 120, 100, 0.5) 0%, rgba(0, 60, 50, 0.2) 100%);
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white p-6 relative overflow-hidden">
+<!-- 背景渐变圆 -->
+<div class="gradient-circle-1"></div>
+<div class="gradient-circle-2"></div>
+
+<div class="max-w-md mx-auto relative z-10">
+    <!-- 顶部Logo和标题 -->
+    <div class="flex items-center gap-3 mb-10">
+        <div class="w-14 h-14 rounded-full bg-cyan-400 flex items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-black flex items-center justify-center text-white font-bold text-2xl">
+                27
+            </div>
+        </div>
+        <h1 class="text-3xl font-bold text-cyan-300">DECO*27 Personality Test</h1>
+    </div>
+
+    <!-- 主题歌曲部分 -->
+    <div class="mb-10">
+        <p class="text-xl text-gray-300 uppercase tracking-widest mb-4">YOUR THEME SONG</p>
+        <h2 class="text-7xl font-bold text-gray-100 leading-tight">
+            ポジティブ・<br>パレード
+        </h2>
+    </div>
+
+    <!-- 歌词卡片 -->
+    <div class="bg-gray-800/60 backdrop-blur-md rounded-3xl p-8 mb-10">
+        <p class="text-2xl text-gray-100 leading-relaxed mb-6">
+            終わらない夜は星と踊って話そう<br>
+            ツラいときも光はずっとと側に
+        </p>
+        <p class="text-xl text-gray-300 leading-relaxed">
+            在无尽的夜晚与星辰共舞交谈吧 哪怕痛苦时光明也会一直陪伴在侧
+        </p>
+    </div>
+
+    <!-- 描述文本 -->
+    <p class="text-2xl text-gray-100 leading-relaxed mb-12">
+        你宛如游行队伍中永不疲倦的旗手。总是散发着光芒去扫除所有的阴霾。
+    </p>
+
+    <!-- 底部二维码 -->
+    <div class="flex justify-end mb-10">
+        <div class="bg-cyan-300 rounded-2xl p-4 text-black flex items-center gap-3">
+            <div class="bg-black p-2 rounded-lg">
+                <!-- 二维码占位 -->
+                <svg width="64" height="64" viewBox="0 0 100 100">
+                    <rect width="100" height="100" fill="black"/>
+                    <rect x="10" y="10" width="20" height="20" fill="white"/>
+                    <rect x="70" y="10" width="20" height="20" fill="white"/>
+                    <rect x="10" y="70" width="20" height="20" fill="white"/>
+                    <rect x="40" y="40" width="20" height="20" fill="white"/>
+                </svg>
+            </div>
+            <div class="text-lg font-semibold">
+                <p>扫码测测</p>
+                <p>你的专属属性</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <p class="text-gray-500 text-lg">@DECO*27 性格测试</p>
+</div>
+</body>
+</html>
