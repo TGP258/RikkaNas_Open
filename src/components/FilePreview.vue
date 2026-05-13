@@ -22,20 +22,17 @@
     </div>
 
     <div class="preview-body">
-      <!-- 加载状态 -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <p class="loading-text">{{ loadingText }}</p>
       </div>
 
-      <!-- 视频预览 -->
       <div v-else-if="isVideo" class="media-preview">
         <video controls class="video-player" autoplay>
           <source :src="fileUrl" :type="fileType">
         </video>
       </div>
 
-      <!-- 音频预览 -->
       <div v-else-if="isAudio" class="audio-preview">
         <div class="audio-cover">
           <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
@@ -51,14 +48,12 @@
         </audio>
       </div>
 
-      <!-- TXT预览 -->
       <div v-else-if="isText" class="text-preview">
         <pre class="text-content">{{ textContent }}</pre>
       </div>
 
-      <!-- PDF预览 -->
-      <div v-else-if="isPdf || isOffice" class="pdf-preview">
-        <div v-if="pdfPages.length === 0" class="pdf-empty">
+      <div v-else-if="isPdf" class="pdf-preview">
+        <div v-if="pdfPages.length === 0 && pdfError" class="pdf-empty">
           <div class="empty-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/>
@@ -67,9 +62,9 @@
               <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.5"/>
             </svg>
           </div>
-          <p>{{ pdfError || '无法加载PDF内容' }}</p>
+          <p>{{ pdfError }}</p>
         </div>
-        <div v-else class="pdf-container">
+        <div v-else-if="pdfPages.length > 0" class="pdf-container">
           <div class="pdf-toolbar">
             <button class="toolbar-btn" @click="prevPage" :disabled="currentPage <= 1">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -100,8 +95,8 @@
             </div>
           </div>
           <div class="pdf-canvas-container">
-            <canvas 
-              v-for="(page, index) in pdfPages" 
+            <canvas
+              v-for="(page, index) in pdfPages"
               :key="index"
               :ref="el => setPageRef(index, el)"
               class="pdf-page"
@@ -111,12 +106,80 @@
         </div>
       </div>
 
-      <!-- 图片预览 -->
+      <div v-else-if="isDocx" class="docx-preview">
+        <div v-if="docxError" class="pdf-empty">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/>
+              <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p>{{ docxError }}</p>
+        </div>
+        <div v-else class="docx-content" v-html="docxHtml"></div>
+      </div>
+
+      <div v-else-if="isXlsx" class="xlsx-preview">
+        <div v-if="xlsxError" class="pdf-empty">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/>
+              <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p>{{ xlsxError }}</p>
+        </div>
+        <div v-else-if="xlsxSheets.length > 0" class="xlsx-container">
+          <div class="xlsx-toolbar">
+            <div class="sheet-tabs">
+              <button
+                v-for="(sheet, idx) in xlsxSheets"
+                :key="idx"
+                :class="['sheet-tab', { active: activeSheet === idx }]"
+                @click="switchSheet(idx)"
+              >{{ sheet.name }}</button>
+            </div>
+          </div>
+          <div class="xlsx-table-wrapper">
+            <table class="xlsx-table" v-html="xlsxSheets[activeSheet]?.html || ''"></table>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="isPptx" class="pptx-preview">
+        <div v-if="pptxError" class="pdf-empty">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/>
+              <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p>{{ pptxError }}</p>
+        </div>
+        <div v-else-if="pptxSlides.length > 0" class="pptx-container">
+          <div class="pptx-toolbar">
+            <button class="toolbar-btn" @click="prevSlide" :disabled="currentSlide <= 1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <span class="page-info">{{ currentSlide }} / {{ pptxSlides.length }}</span>
+            <button class="toolbar-btn" @click="nextSlide" :disabled="currentSlide >= pptxSlides.length">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="pptx-slide-wrapper">
+            <div class="pptx-slide" v-html="pptxSlides[currentSlide - 1]"></div>
+          </div>
+        </div>
+      </div>
+
       <div v-else-if="isImage" class="image-preview">
         <img :src="fileUrl" :alt="fileName" class="preview-image">
       </div>
 
-      <!-- 不支持的文件类型 -->
       <div v-else class="unsupported">
         <div class="unsupported-icon">
           <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
@@ -133,10 +196,12 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, toRaw } from 'vue';
+import { ref, computed, onMounted, onUnmounted, toRaw, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import * as pdfjsLib from 'pdfjs-dist';
+import mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -153,6 +218,14 @@ export default {
     const scale = ref(1);
     const pdfError = ref('');
     const pageRefs = ref([]);
+    const docxHtml = ref('');
+    const docxError = ref('');
+    const xlsxSheets = ref([]);
+    const activeSheet = ref(0);
+    const xlsxError = ref('');
+    const pptxSlides = ref([]);
+    const currentSlide = ref(1);
+    const pptxError = ref('');
 
     const getBackendUrl = () => {
       const protocol = window.location.protocol;
@@ -182,7 +255,6 @@ export default {
         avi: 'video/avi',
         mp3: 'audio/mpeg',
         wav: 'audio/wav',
-        ogg: 'audio/ogg',
         txt: 'text/plain',
         pdf: 'application/pdf'
       };
@@ -193,25 +265,22 @@ export default {
       return `${getBackendUrl()}/api/files/preview?path=${encodeURIComponent(filePath.value)}`;
     });
 
-    const pdfPreviewUrl = computed(() => {
-      if (isOffice.value) {
-        return `${getBackendUrl()}/api/files/office-preview?path=${encodeURIComponent(filePath.value)}`;
-      }
-      return fileUrl.value;
-    });
-
     const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'flv'];
     const audioExts = ['mp3', 'wav', 'ogg', 'm4a', 'flac'];
     const textExts = ['txt', 'md', 'json', 'xml', 'html', 'css', 'js'];
     const pdfExts = ['pdf'];
-    const officeExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+    const docxExts = ['doc', 'docx'];
+    const xlsxExts = ['xls', 'xlsx'];
+    const pptxExts = ['ppt', 'pptx'];
     const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
 
     const isVideo = computed(() => videoExts.includes(fileExt.value));
     const isAudio = computed(() => audioExts.includes(fileExt.value));
     const isText = computed(() => textExts.includes(fileExt.value));
     const isPdf = computed(() => pdfExts.includes(fileExt.value));
-    const isOffice = computed(() => officeExts.includes(fileExt.value));
+    const isDocx = computed(() => docxExts.includes(fileExt.value));
+    const isXlsx = computed(() => xlsxExts.includes(fileExt.value));
+    const isPptx = computed(() => pptxExts.includes(fileExt.value));
     const isImage = computed(() => imageExts.includes(fileExt.value));
 
     const goBack = () => {
@@ -236,36 +305,31 @@ export default {
     };
 
     const loadPdf = async () => {
-      if (!isPdf.value && !isOffice.value) return;
-      
+      if (!isPdf.value) return;
       loading.value = true;
-      loadingText.value = isOffice.value ? '正在转换Office文件...' : '正在加载PDF...';
+      loadingText.value = '正在加载PDF...';
       pdfError.value = '';
 
       try {
-        const response = await axios.get(pdfPreviewUrl.value, { responseType: 'blob' });
-        const arrayBuffer = await response.data.arrayBuffer();
-        
+        const response = await axios.get(fileUrl.value, { responseType: 'arraybuffer' });
         loadingText.value = '正在渲染PDF...';
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pdf = await pdfjsLib.getDocument({ data: response.data }).promise;
         pdfPages.value = [];
-        
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           pdfPages.value.push(page);
         }
-        
+        await nextTick();
         await renderPages();
       } catch (error) {
         console.error('加载PDF失败:', error);
-        pdfError.value = error.response?.data?.error || '加载PDF失败，请尝试下载文件';
+        pdfError.value = '加载PDF失败，请尝试下载文件';
       } finally {
         loading.value = false;
       }
     };
 
     const renderPages = async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
       for (let i = 0; i < pdfPages.value.length; i++) {
         const page = toRaw(pdfPages.value[i]);
         const canvas = pageRefs.value[i];
@@ -321,11 +385,125 @@ export default {
       }
     };
 
+    const loadDocx = async () => {
+      if (!isDocx.value) return;
+      loading.value = true;
+      loadingText.value = '正在加载Word文档...';
+      docxError.value = '';
+
+      try {
+        const response = await axios.get(fileUrl.value, { responseType: 'arraybuffer' });
+        const result = await mammoth.convertToHtml({ arrayBuffer: response.data });
+        docxHtml.value = result.value;
+        if (result.messages.length > 0) {
+          console.warn('Mammoth warnings:', result.messages);
+        }
+      } catch (error) {
+        console.error('加载Word文档失败:', error);
+        docxError.value = '加载Word文档失败，请尝试下载文件';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const loadXlsx = async () => {
+      if (!isXlsx.value) return;
+      loading.value = true;
+      loadingText.value = '正在加载Excel表格...';
+      xlsxError.value = '';
+
+      try {
+        const response = await axios.get(fileUrl.value, { responseType: 'arraybuffer' });
+        const workbook = XLSX.read(response.data, { type: 'array' });
+        const sheets = [];
+
+        workbook.SheetNames.forEach(name => {
+          const worksheet = workbook.Sheets[name];
+          const html = XLSX.utils.sheet_to_html(worksheet, { editable: false });
+          sheets.push({ name, html });
+        });
+
+        xlsxSheets.value = sheets;
+        activeSheet.value = 0;
+      } catch (error) {
+        console.error('加载Excel表格失败:', error);
+        xlsxError.value = '加载Excel表格失败，请尝试下载文件';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const switchSheet = (idx) => {
+      activeSheet.value = idx;
+    };
+
+    const loadPptx = async () => {
+      if (!isPptx.value) return;
+      loading.value = true;
+      loadingText.value = '正在加载PPT演示文稿...';
+      pptxError.value = '';
+
+      try {
+        const response = await axios.get(fileUrl.value, { responseType: 'arraybuffer' });
+        const data = new Uint8Array(response.data);
+        const slides = [];
+
+        const zip = await import('jszip').then(m => m.default.loadAsync(data));
+        const slideFiles = Object.keys(zip.files)
+          .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+          .sort((a, b) => {
+            const numA = parseInt(a.match(/slide(\d+)/)[1]);
+            const numB = parseInt(b.match(/slide(\d+)/)[1]);
+            return numA - numB;
+          });
+
+        for (const slideFile of slideFiles) {
+          const xmlContent = await zip.files[slideFile].async('text');
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(xmlContent, 'application/xml');
+
+          const texts = [];
+          const textElements = doc.getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/main', 't');
+          for (let i = 0; i < textElements.length; i++) {
+            const text = textElements[i].textContent.trim();
+            if (text) texts.push(text);
+          }
+
+          slides.push(texts.join('<br>'));
+        }
+
+        if (slides.length === 0) {
+          pptxError.value = '无法解析PPT内容，请下载文件查看';
+        } else {
+          pptxSlides.value = slides;
+        }
+      } catch (error) {
+        console.error('加载PPT失败:', error);
+        pptxError.value = '加载PPT失败，请尝试下载文件';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const prevSlide = () => {
+      if (currentSlide.value > 1) currentSlide.value--;
+    };
+
+    const nextSlide = () => {
+      if (currentSlide.value < pptxSlides.value.length) currentSlide.value++;
+    };
+
     onMounted(() => {
       if (isText.value) {
         loadTextContent();
-      } else if (isPdf.value || isOffice.value) {
+      } else if (isPdf.value) {
         loadPdf();
+      } else if (isDocx.value) {
+        loadDocx();
+      } else if (isXlsx.value) {
+        loadXlsx();
+      } else if (isPptx.value) {
+        loadPptx();
       } else {
         loading.value = false;
       }
@@ -349,11 +527,21 @@ export default {
       currentPage,
       scale,
       pdfError,
+      docxHtml,
+      docxError,
+      xlsxSheets,
+      activeSheet,
+      xlsxError,
+      pptxSlides,
+      currentSlide,
+      pptxError,
       isVideo,
       isAudio,
       isText,
       isPdf,
-      isOffice,
+      isDocx,
+      isXlsx,
+      isPptx,
       isImage,
       goBack,
       downloadFile,
@@ -361,7 +549,10 @@ export default {
       nextPage,
       zoomIn,
       zoomOut,
-      setPageRef
+      setPageRef,
+      switchSheet,
+      prevSlide,
+      nextSlide
     };
   }
 };
@@ -453,7 +644,6 @@ export default {
   padding: 0;
 }
 
-/* 加载状态 */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -481,7 +671,6 @@ export default {
   font-size: 14px;
 }
 
-/* 视频预览 */
 .media-preview {
   background: #000;
 }
@@ -492,7 +681,6 @@ export default {
   display: block;
 }
 
-/* 音频预览 */
 .audio-preview {
   display: flex;
   flex-direction: column;
@@ -531,11 +719,6 @@ export default {
   height: 40px;
 }
 
-.audio-player::-webkit-media-controls-panel {
-  background: #262626;
-}
-
-/* 文本预览 */
 .text-preview {
   background: #fff;
   min-height: calc(100vh - 61px);
@@ -552,7 +735,6 @@ export default {
   margin: 0;
 }
 
-/* PDF预览 */
 .pdf-preview {
   min-height: calc(100vh - 61px);
   background: #111;
@@ -651,7 +833,205 @@ export default {
   border-radius: 4px;
 }
 
-/* 图片预览 */
+.docx-preview {
+  min-height: calc(100vh - 61px);
+  background: #fff;
+}
+
+.docx-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 32px;
+  color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.docx-content :deep(h1) {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 24px 0 16px;
+  color: #111;
+}
+
+.docx-content :deep(h2) {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 20px 0 12px;
+  color: #222;
+}
+
+.docx-content :deep(h3) {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 16px 0 10px;
+  color: #333;
+}
+
+.docx-content :deep(p) {
+  margin: 8px 0;
+}
+
+.docx-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.docx-content :deep(td),
+.docx-content :deep(th) {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.docx-content :deep(th) {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+.docx-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.docx-content :deep(ul),
+.docx-content :deep(ol) {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.docx-content :deep(li) {
+  margin: 4px 0;
+}
+
+.xlsx-preview {
+  min-height: calc(100vh - 61px);
+  background: #fff;
+}
+
+.xlsx-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 61px);
+}
+
+.xlsx-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e0e0e0;
+  overflow-x: auto;
+}
+
+.sheet-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.sheet-tab {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sheet-tab:hover {
+  background: #eee;
+  color: #333;
+}
+
+.sheet-tab.active {
+  background: #fff;
+  color: #1a73e8;
+  border-color: #1a73e8;
+  font-weight: 500;
+}
+
+.xlsx-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.xlsx-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  color: #333;
+  min-width: 100%;
+}
+
+.xlsx-table :deep(td),
+.xlsx-table :deep(th) {
+  border: 1px solid #e0e0e0;
+  padding: 4px 8px;
+  white-space: nowrap;
+  min-width: 60px;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.xlsx-table :deep(th) {
+  background: #f0f0f0;
+  font-weight: 500;
+  color: #555;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.pptx-preview {
+  min-height: calc(100vh - 61px);
+  background: #111;
+}
+
+.pptx-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 61px);
+}
+
+.pptx-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #262626;
+}
+
+.pptx-slide-wrapper {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.pptx-slide {
+  background: #fff;
+  border-radius: 8px;
+  padding: 48px 56px;
+  max-width: 960px;
+  width: 100%;
+  min-height: 400px;
+  color: #1a1a1a;
+  font-size: 18px;
+  line-height: 1.8;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
 .image-preview {
   display: flex;
   align-items: center;
@@ -667,7 +1047,6 @@ export default {
   object-fit: contain;
 }
 
-/* 不支持的文件类型 */
 .unsupported {
   display: flex;
   flex-direction: column;
@@ -711,7 +1090,6 @@ export default {
   background: #ff6b6f;
 }
 
-/* 响应式 */
 @media (max-width: 768px) {
   .preview-header {
     padding: 10px 16px;
@@ -730,7 +1108,8 @@ export default {
     height: 120px;
   }
 
-  .pdf-toolbar {
+  .pdf-toolbar,
+  .pptx-toolbar {
     padding: 10px 12px;
     gap: 12px;
   }
@@ -738,6 +1117,15 @@ export default {
   .zoom-controls {
     margin-left: 12px;
     padding-left: 12px;
+  }
+
+  .docx-content {
+    padding: 24px 16px;
+  }
+
+  .pptx-slide {
+    padding: 24px;
+    font-size: 14px;
   }
 }
 </style>
