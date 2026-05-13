@@ -144,7 +144,16 @@ router.get('/download', async (req, res) => {
 router.delete('/delete', async (req, res) => {
     try {
         const { path } = req.body;
-        await fileUtils.deleteFile(path);
+        const fullPath = fileUtils.safePath(path);
+        const fs = require('fs').promises;
+        
+        const stats = await fs.stat(fullPath);
+        if (stats.isDirectory()) {
+            await fileUtils.deleteFolder(path);
+        } else {
+            await fileUtils.deleteFile(path);
+        }
+        
         res.json({ success: true, message: '删除成功' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

@@ -89,9 +89,10 @@ export const uploadFile = async (files, path = '') => {
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file.webkitRelativePath) {
-            // 文件夹上传：编码webkitRelativePath，文件名用 __NAME__ 标记原始文件名
+            // 文件夹上传：编码webkitRelativePath和文件名
             const encodedPath = encodeFileName(file.webkitRelativePath);
-            const finalName = `__PATH__${encodedPath}__NAME__${file.name}`;
+            const encodedName = encodeFileName(file.name);
+            const finalName = `__PATH__${encodedPath}__NAME__${encodedName}`;
             const fileContent = file.slice();
             const fileWithPath = new File([fileContent], finalName, { type: file.type });
             formData.append('file', fileWithPath);

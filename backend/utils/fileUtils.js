@@ -250,13 +250,15 @@ const uploadFile = async (file, relativePath = '') => {
         // 优先使用路由层已解码的文件名
         const finalFileName = file.decodedFileName || file.originalname;
         const finalRelativePath = file.decodedRelativePath || relativePath;
-        const finalDir = safePath(finalRelativePath);
+        
+        // 构建最终目录路径（基于storage根目录）
+        const finalDir = finalRelativePath 
+            ? safePath(finalRelativePath) 
+            : STORAGE_ROOT;
         const finalPath = path.join(finalDir, finalFileName);
 
-        // 确保目录存在
-        if (!fsSync.existsSync(finalDir)) {
-            await fs.mkdir(finalDir, { recursive: true });
-        }
+        // 确保目录存在（递归创建）
+        await fs.mkdir(finalDir, { recursive: true });
 
         await fs.writeFile(finalPath, file.buffer);
         const stats = await fs.stat(finalPath);
@@ -450,6 +452,7 @@ const renameFolder = async (oldPath, newName) => {
 module.exports = {
     initStorage,
     unlockAndRelease,
+    releaseVaultToStorage,
     syncStorageToVault,
     safePath,
     checkFileExists,
