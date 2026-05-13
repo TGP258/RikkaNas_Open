@@ -125,7 +125,6 @@
               :key="index"
               :ref="el => setPageRef(index, el)"
               class="pdf-page"
-              :style="{ transform: `scale(${scale})`, transformOrigin: 'top center' }"
             ></canvas>
           </div>
         </div>
@@ -419,10 +418,30 @@ export default {
         const viewport = page.getViewport({ scale: scale.value });
         canvas.width = viewport.width;
         canvas.height = viewport.height;
+        
+        // 设置canvas样式
+        canvas.style.width = `${viewport.width * scale.value}px`;
+        canvas.style.height = `${viewport.height * scale.value}px`;
 
         const ctx = canvas.getContext('2d');
         await page.render({ canvasContext: ctx, viewport }).promise;
       }
+    };
+    
+    const updateScale = async (delta) => {
+      const newScale = scale.value + delta;
+      if (newScale >= 0.5 && newScale <= 2) {
+        scale.value = newScale;
+        await renderPages();
+      }
+    };
+    
+    const zoomIn = () => {
+      updateScale(0.1);
+    };
+    
+    const zoomOut = () => {
+      updateScale(-0.1);
     };
 
     const setPageRef = (index, el) => {
@@ -442,20 +461,6 @@ export default {
       if (currentPage.value < pdfPages.value.length) {
         currentPage.value++;
         scrollToPage(currentPage.value);
-      }
-    };
-
-    const zoomIn = () => {
-      if (scale.value < 2) {
-        scale.value += 0.1;
-        renderPages();
-      }
-    };
-
-    const zoomOut = () => {
-      if (scale.value > 0.5) {
-        scale.value -= 0.1;
-        renderPages();
       }
     };
 

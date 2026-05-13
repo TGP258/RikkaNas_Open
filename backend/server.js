@@ -10,7 +10,9 @@ const fileUtils = require('./utils/fileUtils');
 const app = express();
 const path = require('path');
 const fs = require('fs/promises');
-app.use(cors());
+app.use(cors({
+    exposedHeaders: ['Content-Disposition', 'Content-Type']
+}));
 app.use(express.json());
 
 fileUtils.initStorage().then(() => {
