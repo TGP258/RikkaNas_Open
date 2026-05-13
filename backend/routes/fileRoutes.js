@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer'); // 处理文件上传
 const fileUtils = require('../utils/fileUtils');
+const officeConverter = require('../utils/officeConverter');
 
 // 初始化multer
 const upload = multer({ storage: multer.memoryStorage() });
@@ -273,6 +274,28 @@ router.get('/preview', async (req, res) => {
         res.setHeader('Access-Control-Allow-Methods', 'GET');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         res.sendFile(fullPath);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Office转PDF预览接口
+router.get('/office-preview', async (req, res) => {
+    try {
+        const { path } = req.query;
+        const fullPath = await fileUtils.getFullFilePath(path);
+        
+        if (!officeConverter.isOfficeFile(fullPath)) {
+            return res.status(400).json({ success: false, error: '不支持的文件类型' });
+        }
+        
+        const pdfPath = await officeConverter.convertOfficeToPdf(fullPath);
+        
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.sendFile(pdfPath);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

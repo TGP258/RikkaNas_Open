@@ -25,6 +25,7 @@
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
+        <p class="loading-text">{{ loadingText }}</p>
       </div>
 
       <!-- 视频预览 -->
@@ -56,19 +57,58 @@
       </div>
 
       <!-- PDF预览 -->
-      <div v-else-if="isPdf" class="pdf-preview">
-        <iframe :src="'https://docs.google.com/gview?url=' + encodeURIComponent(fileUrl) + '&embedded=true'"
-                class="pdf-iframe"
-                frameborder="0">
-        </iframe>
-      </div>
-
-      <!-- Office文件预览 -->
-      <div v-else-if="isOffice" class="office-preview">
-        <iframe :src="'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(fileUrl)"
-                class="office-iframe"
-                frameborder="0">
-        </iframe>
+      <div v-else-if="isPdf || isOffice" class="pdf-preview">
+        <div v-if="pdfPages.length === 0" class="pdf-empty">
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.5"/>
+              <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p>{{ pdfError || '无法加载PDF内容' }}</p>
+        </div>
+        <div v-else class="pdf-container">
+          <div class="pdf-toolbar">
+            <button class="toolbar-btn" @click="prevPage" :disabled="currentPage <= 1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <span class="page-info">{{ currentPage }} / {{ pdfPages.length }}</span>
+            <button class="toolbar-btn" @click="nextPage" :disabled="currentPage >= pdfPages.length">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="zoom-controls">
+              <button class="toolbar-btn" @click="zoomOut" :disabled="scale <= 0.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
+              <span class="zoom-value">{{ Math.round(scale * 100) }}%</span>
+              <button class="toolbar-btn" @click="zoomIn" :disabled="scale >= 2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2"/>
+                  <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="pdf-canvas-container">
+            <canvas 
+              v-for="(page, index) in pdfPages" 
+              :key="index"
+              :ref="el => setPageRef(index, el)"
+              class="pdf-page"
+              :style="{ transform: `scale(${scale})`, transformOrigin: 'top center' }"
+            ></canvas>
+          </div>
+        </div>
       </div>
 
       <!-- 图片预览 -->
@@ -93,9 +133,12 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, toRaw } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
 export default {
   name: 'FilePreview',
@@ -104,6 +147,12 @@ export default {
     const router = useRouter();
     const textContent = ref('');
     const loading = ref(false);
+    const loadingText = ref('加载中...');
+    const pdfPages = ref([]);
+    const currentPage = ref(1);
+    const scale = ref(1);
+    const pdfError = ref('');
+    const pageRefs = ref([]);
 
     const getBackendUrl = () => {
       const protocol = window.location.protocol;
@@ -144,6 +193,13 @@ export default {
       return `${getBackendUrl()}/api/files/preview?path=${encodeURIComponent(filePath.value)}`;
     });
 
+    const pdfPreviewUrl = computed(() => {
+      if (isOffice.value) {
+        return `${getBackendUrl()}/api/files/office-preview?path=${encodeURIComponent(filePath.value)}`;
+      }
+      return fileUrl.value;
+    });
+
     const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'flv'];
     const audioExts = ['mp3', 'wav', 'ogg', 'm4a', 'flac'];
     const textExts = ['txt', 'md', 'json', 'xml', 'html', 'css', 'js'];
@@ -179,12 +235,105 @@ export default {
       }
     };
 
+    const loadPdf = async () => {
+      if (!isPdf.value && !isOffice.value) return;
+      
+      loading.value = true;
+      loadingText.value = isOffice.value ? '正在转换Office文件...' : '正在加载PDF...';
+      pdfError.value = '';
+
+      try {
+        const response = await axios.get(pdfPreviewUrl.value, { responseType: 'blob' });
+        const arrayBuffer = await response.data.arrayBuffer();
+        
+        loadingText.value = '正在渲染PDF...';
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        pdfPages.value = [];
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          pdfPages.value.push(page);
+        }
+        
+        await renderPages();
+      } catch (error) {
+        console.error('加载PDF失败:', error);
+        pdfError.value = error.response?.data?.error || '加载PDF失败，请尝试下载文件';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const renderPages = async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      for (let i = 0; i < pdfPages.value.length; i++) {
+        const page = toRaw(pdfPages.value[i]);
+        const canvas = pageRefs.value[i];
+        if (!canvas || !page) continue;
+
+        const viewport = page.getViewport({ scale: scale.value });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      }
+    };
+
+    const setPageRef = (index, el) => {
+      if (el) {
+        pageRefs.value[index] = el;
+      }
+    };
+
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--;
+        scrollToPage(currentPage.value);
+      }
+    };
+
+    const nextPage = () => {
+      if (currentPage.value < pdfPages.value.length) {
+        currentPage.value++;
+        scrollToPage(currentPage.value);
+      }
+    };
+
+    const zoomIn = () => {
+      if (scale.value < 2) {
+        scale.value += 0.1;
+        renderPages();
+      }
+    };
+
+    const zoomOut = () => {
+      if (scale.value > 0.5) {
+        scale.value -= 0.1;
+        renderPages();
+      }
+    };
+
+    const scrollToPage = (pageNum) => {
+      const canvas = pageRefs.value[pageNum - 1];
+      if (canvas) {
+        canvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
     onMounted(() => {
       if (isText.value) {
         loadTextContent();
+      } else if (isPdf.value || isOffice.value) {
+        loadPdf();
       } else {
         loading.value = false;
       }
+    });
+
+    onUnmounted(() => {
+      pdfPages.value = [];
+      pageRefs.value = [];
     });
 
     return {
@@ -195,6 +344,11 @@ export default {
       fileType,
       textContent,
       loading,
+      loadingText,
+      pdfPages,
+      currentPage,
+      scale,
+      pdfError,
       isVideo,
       isAudio,
       isText,
@@ -202,7 +356,12 @@ export default {
       isOffice,
       isImage,
       goBack,
-      downloadFile
+      downloadFile,
+      prevPage,
+      nextPage,
+      zoomIn,
+      zoomOut,
+      setPageRef
     };
   }
 };
@@ -297,9 +456,11 @@ export default {
 /* 加载状态 */
 .loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: calc(100vh - 61px);
+  gap: 16px;
 }
 
 .spinner {
@@ -313,6 +474,11 @@ export default {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #666;
+  font-size: 14px;
 }
 
 /* 视频预览 */
@@ -389,25 +555,100 @@ export default {
 /* PDF预览 */
 .pdf-preview {
   min-height: calc(100vh - 61px);
-  background: #333;
+  background: #111;
 }
 
-.pdf-iframe {
-  width: 100%;
-  height: calc(100vh - 61px);
-  border: none;
-}
-
-/* Office预览 */
-.office-preview {
+.pdf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: calc(100vh - 61px);
-  background: #333;
+  color: #666;
+  gap: 16px;
 }
 
-.office-iframe {
-  width: 100%;
+.empty-icon {
+  color: #444;
+}
+
+.pdf-container {
+  display: flex;
+  flex-direction: column;
   height: calc(100vh - 61px);
-  border: none;
+}
+
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #262626;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #262626;
+  color: #fff;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 13px;
+  color: #999;
+  min-width: 80px;
+  text-align: center;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+  padding-left: 20px;
+  border-left: 1px solid #333;
+}
+
+.zoom-value {
+  font-size: 13px;
+  color: #999;
+  min-width: 50px;
+  text-align: center;
+}
+
+.pdf-canvas-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pdf-page {
+  max-width: 100%;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
 }
 
 /* 图片预览 */
@@ -487,6 +728,16 @@ export default {
   .audio-cover {
     width: 120px;
     height: 120px;
+  }
+
+  .pdf-toolbar {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+
+  .zoom-controls {
+    margin-left: 12px;
+    padding-left: 12px;
   }
 }
 </style>
