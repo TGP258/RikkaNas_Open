@@ -11,15 +11,40 @@
           <span class="file-name">{{ fileName }}</span>
         </div>
       </div>
-      <button class="action-btn" @click="downloadFile">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        下载
-      </button>
-    </div>
+      <div class="header-right">
+        <button 
+          class="action-btn" 
+          @click="downloadFile"
+          :class="{ downloading: downloadStatus === 'downloading', paused: downloadStatus === 'paused' }"
+        >
+          <svg v-if="downloadStatus === 'idle' || downloadStatus === 'completed' || downloadStatus === 'error'" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg v-else-if="downloadStatus === 'downloading'" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="6" y="4" width="4" height="16" fill="currentColor"/>
+            <rect x="14" y="4" width="4" height="16" fill="currentColor"/>
+          </svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>{{ downloadStatus === 'downloading' ? '暂停' : (downloadStatus === 'paused' ? '继续' : '下载') }}</span>
+        </button>
+        
+        <!-- 下载进度条 -->
+        <div v-if="downloadStatus === 'downloading' || downloadStatus === 'paused'" class="download-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: downloadProgress + '%' }"></div>
+          </div>
+          <div class="progress-info">
+            <span>{{ downloadProgress }}%</span>
+            <span>{{ downloadSize }}</span>
+            <span>{{ downloadSpeed }}</span>
+          </div>
+        </div>
+      </div>
+    </div>  <!-- 关闭 preview-header -->
 
     <div class="preview-body">
       <div v-if="loading" class="loading-state">
@@ -202,6 +227,7 @@ import axios from 'axios';
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
+import { downloadFile, DownloadStatus } from '../utils/downloader';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -226,6 +252,13 @@ export default {
     const pptxSlides = ref([]);
     const currentSlide = ref(1);
     const pptxError = ref('');
+    
+    // 下载相关状态
+    const downloadStatus = ref(DownloadStatus.IDLE);
+    const downloadProgress = ref(0);
+    const downloadSpeed = ref('0 B/s');
+    const downloadSize = ref('');
+    const downloaderInstance = ref(null);
 
     const getBackendUrl = () => {
       const protocol = window.location.protocol;
@@ -287,8 +320,56 @@ export default {
       router.back();
     };
 
-    const downloadFile = () => {
-      window.open(`${getBackendUrl()}/api/files/download?path=${encodeURIComponent(filePath.value)}`, '_blank');
+    const downloadFile = async () => {
+      if (downloadStatus.value === DownloadStatus.DOWNLOADING) {
+        downloaderInstance.value?.pause();
+        return;
+      }
+      
+      if (downloadStatus.value === DownloadStatus.PAUSED) {
+        downloaderInstance.value?.resume();
+        return;
+      }
+      
+      downloadStatus.value = DownloadStatus.DOWNLOADING;
+      downloadProgress.value = 0;
+      
+      try {
+        downloaderInstance.value = await downloadFile(filePath.value, {
+          fileName: fileName.value,
+          chunkSize: 1024 * 1024, // 1MB
+          maxRetries: 3,
+          onProgress: (progressInfo) => {
+            downloadProgress.value = progressInfo.progress;
+            downloadSpeed.value = formatSpeed(progressInfo.speed);
+            downloadSize.value = `${formatSize(progressInfo.downloadedSize)} / ${formatSize(progressInfo.totalSize)}`;
+          },
+          onStatusChange: (statusInfo) => {
+            downloadStatus.value = statusInfo.status;
+          },
+          onComplete: (fileName) => {
+            console.log('下载完成:', fileName);
+          },
+          onError: (error) => {
+            console.error('下载失败:', error);
+          }
+        });
+      } catch (error) {
+        console.error('下载失败:', error);
+        downloadStatus.value = DownloadStatus.ERROR;
+      }
+    };
+    
+    const formatSize = (bytes) => {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+    
+    const formatSpeed = (bytesPerSecond) => {
+      return formatSize(bytesPerSecond) + '/s';
     };
 
     const loadTextContent = async () => {
@@ -638,6 +719,55 @@ export default {
 
 .action-btn:hover {
   background: #ff6b6f;
+}
+
+.action-btn.downloading {
+  background: #4CAF50;
+}
+
+.action-btn.downloading:hover {
+  background: #45a049;
+}
+
+.action-btn.paused {
+  background: #ff9800;
+}
+
+.action-btn.paused:hover {
+  background: #f57c00;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.download-progress {
+  width: 300px;
+}
+
+.progress-bar {
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4CAF50;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #888;
 }
 
 .preview-body {

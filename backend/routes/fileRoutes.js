@@ -133,8 +133,8 @@ router.post('/upload', upload.any(), async (req, res) => {
 router.get('/download', async (req, res) => {
     try {
         const { path } = req.query;
-        // 调用downloadFile，传入res和path参数
-        await fileUtils.downloadFile(res, path);
+        // 调用downloadFile，传入req、res和path参数
+        await fileUtils.downloadFile(req, res, path);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

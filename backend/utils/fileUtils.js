@@ -249,14 +249,45 @@ const uploadFolder = async (files, relativePath = '') => {
     return results;
 };
 
-// 下载文件
-const downloadFile = async (res, filePath) => {
+// 下载文件（支持断点续传）
+const downloadFile = async (req, res, filePath) => {
     const fullPath = safePath(filePath);
     try {
         const stats = await fs.stat(fullPath);
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(path.basename(filePath))}"`);
-        res.setHeader('Content-Length', stats.size);
-        res.sendFile(fullPath);
+        const fileSize = stats.size;
+        const fileName = path.basename(filePath);
+        
+        // 设置基础响应头
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Accept-Ranges', 'bytes');
+        
+        // 检查是否有Range请求
+        const range = req.headers.range;
+        if (range) {
+            // 解析Range请求：bytes=start-end
+            const parts = range.replace(/bytes=/, '').split('-');
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            
+            if (start >= fileSize) {
+                res.status(416).json({ success: false, error: '请求范围无效' });
+                return;
+            }
+            
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(fullPath, { start, end });
+            
+            res.status(206); // Partial Content
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+            res.setHeader('Content-Length', chunksize);
+            
+            file.pipe(res);
+        } else {
+            // 完整下载
+            res.setHeader('Content-Length', fileSize);
+            res.sendFile(fullPath);
+        }
     } catch (error) {
         console.error('下载文件失败：', error);
         res.status(404).json({ success: false, error: '文件不存在' });
