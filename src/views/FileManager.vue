@@ -119,6 +119,7 @@
       <div class="menu-item" @click="handleCopy">复制</div>
       <div class="menu-item" @click="handleCut">剪切</div>
       <div class="menu-item" @click="handlePaste">粘贴</div>
+      <div class="menu-item" @click="handleDownload">下载</div>
       <div class="menu-item" @click="handleShare">共享文件</div>
       <div class="menu-item" @click="handleRename">重命名</div>
       <div class="menu-item danger" @click="handleDelete">删除</div>
@@ -221,12 +222,15 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   getFileList, uploadFile, downloadFile, deleteFile,
   renameFile, setClipboard, pasteFile, searchFiles,
   createFolder, checkFileExists, calculateFileMd5
 } from '@/api/fileApi';
 import axios from 'axios';
+
+const router = useRouter();
 
 // 共享相关状态
 const shareModalVisible = ref(false);
@@ -333,10 +337,38 @@ const navigateTo = (path) => {
   loadFileList(path);
 };
 
+// 支持预览的文件类型
+const previewExtensions = [
+  // 视频
+  'mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'flv',
+  // 音频
+  'mp3', 'wav', 'ogg', 'm4a', 'flac',
+  // 文本
+  'txt', 'md', 'json', 'xml', 'html', 'css', 'js',
+  // PDF
+  'pdf',
+  // Office
+  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  // 图片
+  'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'
+];
+
+// 判断文件是否支持预览
+const isPreviewable = (filename) => {
+  const ext = filename.split('.').pop().toLowerCase();
+  return previewExtensions.includes(ext);
+};
+
 // 双击文件/文件夹
 const handleItemDblClick = (file) => {
   if (file.type === 'folder') {
     navigateTo(file.path);
+  } else if (isPreviewable(file.name)) {
+    // 支持预览的文件类型，跳转到预览页面
+    router.push({
+      path: '/file-preview',
+      query: { path: file.path }
+    });
   } else {
     downloadFile(file.path);
   }
@@ -578,6 +610,15 @@ const handlePaste = () => {
       .catch(error => {
         showToast(error.response?.data?.error || '粘贴失败', 'error');
       });
+};
+
+// 下载文件
+const handleDownload = () => {
+  const file = contextMenu.value.file;
+  if (file.type === 'file') {
+    downloadFile(file.path);
+    closeContextMenu();
+  }
 };
 
 // 重命名

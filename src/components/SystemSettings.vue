@@ -247,11 +247,9 @@ const updateValue = async (section, key, event) => {
       await configStore.saveIniConfig();
       if (key === 'api_key') {
         localStorage.setItem('ai_api_key', newValue);
-        console.log('=== API密钥保存调试 ===');
         console.log('保存的密钥值:', newValue);
         console.log('localStorage中的密钥:', localStorage.getItem('ai_api_key'));
         console.log('密钥长度:', newValue.length);
-        console.log('======================');
       }
       const label = getLabelForKey(key);
       message.value = `${label} 已更新`;

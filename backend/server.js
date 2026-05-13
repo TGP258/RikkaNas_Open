@@ -13,7 +13,14 @@ const fs = require('fs/promises');
 app.use(cors());
 app.use(express.json());
 
-fileUtils.initStorage().catch(err => console.error('Storage初始化失败：', err));
+fileUtils.initStorage().then(() => {
+    console.log('=== Storage初始化完成 ===');
+    const vaultStatus = require('./utils/vault').getStatus();
+    console.log('保险库状态:', vaultStatus);
+    if (!vaultStatus.exists) {
+        console.log('保险库不存在，首次启动将创建新保险库');
+    }
+}).catch(err => console.error('Storage初始化失败：', err));
 
 app.use('/api/ini', iniRoutes);
 app.use('/api/files', fileRoutes);

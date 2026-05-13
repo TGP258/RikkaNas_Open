@@ -18,6 +18,69 @@ router.get('/list', async (req, res) => {
 });
 
 
+// 解码文件名
+const decodeFileName = (encodedName) => {
+    try {
+        // 处理 __NAME__xxx 格式
+        if (encodedName.startsWith('__NAME__')) {
+            const base64Str = encodedName.substring(8);
+            const decodedBuffer = Buffer.from(base64Str, 'base64');
+            return decodedBuffer.toString('utf-8');
+        }
+        // 处理 __PATH__xxx__NAME__yyy 格式
+        if (encodedName.startsWith('__PATH__')) {
+            const nameIndex = encodedName.lastIndexOf('__NAME__');
+            if (nameIndex !== -1) {
+                const base64Str = encodedName.substring(nameIndex + 8);
+                const decodedBuffer = Buffer.from(base64Str, 'base64');
+                return decodedBuffer.toString('utf-8');
+            }
+        }
+        return encodedName;
+    } catch (error) {
+        console.error('解码文件名失败:', error);
+        return encodedName;
+    }
+};
+
+// 解析路径信息
+const parseFilePath = (encodedName) => {
+    try {
+        // 处理文件夹上传：__PATH__xxx__NAME__yyy 格式
+        if (encodedName.startsWith('__PATH__')) {
+            const nameIndex = encodedName.lastIndexOf('__NAME__');
+            if (nameIndex !== -1) {
+                const pathBase64 = encodedName.substring(8, nameIndex);
+                const nameBase64 = encodedName.substring(nameIndex + 8);
+                const pathBuffer = Buffer.from(pathBase64, 'base64');
+                const nameBuffer = Buffer.from(nameBase64, 'base64');
+                const fullPath = pathBuffer.toString('utf-8');
+                // 获取目录路径（去掉文件名）
+                const lastSlash = fullPath.lastIndexOf('/');
+                const relativePath = lastSlash !== -1 ? fullPath.substring(0, lastSlash) : '';
+                return {
+                    relativePath,
+                    fileName: nameBuffer.toString('utf-8')
+                };
+            }
+        }
+        // 处理单文件上传：__NAME__xxx 格式
+        if (encodedName.startsWith('__NAME__')) {
+            const nameBase64 = encodedName.substring(8);
+            const nameBuffer = Buffer.from(nameBase64, 'base64');
+            return {
+                relativePath: '',
+                fileName: nameBuffer.toString('utf-8')
+            };
+        }
+        // 默认情况：不包含标记，直接返回原始名称
+        return { relativePath: '', fileName: encodedName };
+    } catch (error) {
+        console.error('解析文件路径失败:', error);
+        return { relativePath: '', fileName: encodedName };
+    }
+};
+
 router.post('/upload', upload.any(), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
@@ -29,14 +92,25 @@ router.post('/upload', upload.any(), async (req, res) => {
         const { path = '' } = req.body;
 
         let result = [];
-        // 通过 webkitRelativePath 判断是否是文件夹上传
-        const isFolderUpload = req.files.some(file => file.webkitRelativePath);
+        // 通过原始文件名判断是否是文件夹上传（包含 __PATH__ 标记）
+        const isFolderUpload = req.files.some(file => file.originalname.startsWith('__PATH__'));
+        
+        // 预处理文件，解码文件名
+        const processedFiles = req.files.map(file => {
+            const parsed = parseFilePath(file.originalname);
+            return {
+                ...file,
+                decodedFileName: parsed.fileName,
+                decodedRelativePath: parsed.relativePath
+            };
+        });
+        
         if (isFolderUpload) {
             // 处理文件夹上传
-            result = await fileUtils.uploadFolder(req.files, path);
+            result = await fileUtils.uploadFolder(processedFiles, path);
         } else {
             // 处理单个/多个文件上传
-            for (const file of req.files) {
+            for (const file of processedFiles) {
                 const fileResult = await fileUtils.uploadFile(file, path);
                 result.push(fileResult);
             }
@@ -55,12 +129,12 @@ router.post('/upload', upload.any(), async (req, res) => {
     }
 });
 
-//  文件下载
+// 文件下载
 router.get('/download', async (req, res) => {
     try {
         const { path } = req.query;
-        const fullPath = await fileUtils.downloadFile(path);
-        res.download(fullPath); // Express内置下载方法
+        // 调用downloadFile，传入res和path参数
+        await fileUtils.downloadFile(res, path);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -161,4 +235,47 @@ router.post('/create-folder', async (req, res) => {
         });
     }
 });
+
+// 检查文件是否存在接口
+router.post('/check-exists', async (req, res) => {
+    try {
+        const { path = '', filename, md5 } = req.body;
+        if (!filename) {
+            return res.status(400).json({ success: false, error: '文件名不能为空' });
+        }
+        
+        const exists = await fileUtils.checkFileExists(path, filename);
+        let md5Exists = false;
+        if (md5) {
+            md5Exists = await fileUtils.isMd5Exists(md5);
+        }
+        
+        res.json({ 
+            success: true, 
+            data: { 
+                exists, 
+                md5Exists,
+                filename 
+            } 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 文件预览接口
+router.get('/preview', async (req, res) => {
+    try {
+        const { path } = req.query;
+        const fullPath = await fileUtils.getFullFilePath(path);
+        // 设置允许跨域访问资源
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.sendFile(fullPath);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

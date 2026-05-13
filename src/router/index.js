@@ -161,6 +161,11 @@
            path: '/user-admin',
            name: 'UserAdmin',
            component: () => import('@/views/UserAdmin.vue')
+       },
+       {
+           path: '/file-preview',
+           name: 'FilePreview',
+           component: () => import('@/components/FilePreview.vue')
        }
        // 可以继续添加更多路由
    ]

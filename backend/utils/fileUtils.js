@@ -109,6 +109,15 @@ const checkFileExists = async (basePath, filename) => {
     return fsSync.existsSync(fullPath);
 };
 
+// 获取文件完整路径（用于预览）
+const getFullFilePath = async (filePath) => {
+    const fullPath = safePath(filePath);
+    if (!fsSync.existsSync(fullPath)) {
+        throw new Error('文件不存在');
+    }
+    return fullPath;
+};
+
 // 获取目录文件列表
 const getFileList = async (relativePath = '') => {
     const fullPath = safePath(relativePath);
@@ -375,5 +384,6 @@ module.exports = {
     createFolder,
     deleteFolder,
     renameFolder,
-    isMd5Exists
+    isMd5Exists,
+    getFullFilePath
 };
