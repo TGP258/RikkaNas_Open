@@ -106,6 +106,13 @@ const unlockAndRelease = async () => {
 // 将保险库中的文件释放到storage
 const releaseVaultToStorage = async () => {
     try {
+        // 确保保险库已解锁
+        const vaultStatus = vault.getStatus();
+        if (!vaultStatus.isUnlocked) {
+            console.log('保险库已锁定，尝试解锁...');
+            await vault.unlockVault(DEFAULT_VAULT_PASSWORD);
+        }
+
         const result = await vault.listFiles('');
         const allFiles = [...result.folders, ...result.files];
         let releasedCount = 0;
@@ -200,8 +207,17 @@ const syncStorageToVault = async () => {
         if (!status.exists) {
             console.log('保险库不存在，创建新保险库...');
             await vault.createVault(DEFAULT_VAULT_PASSWORD);
+            console.log('创建完成，解锁保险库...');
+            await vault.unlockVault(DEFAULT_VAULT_PASSWORD);
         } else if (!status.isUnlocked) {
             console.log('解锁保险库...');
+            await vault.unlockVault(DEFAULT_VAULT_PASSWORD);
+        }
+
+        // 确保保险库已解锁
+        const currentStatus = vault.getStatus();
+        if (!currentStatus.isUnlocked) {
+            console.log('保险库未解锁，尝试解锁...');
             await vault.unlockVault(DEFAULT_VAULT_PASSWORD);
         }
 
@@ -449,6 +465,234 @@ const renameFolder = async (oldPath, newName) => {
     }
 };
 
+// 搜索文件（支持多关键词，逗号分隔）
+const searchFiles = async (keyword, relativePath = '') => {
+    const fullPath = safePath(relativePath);
+    const results = [];
+    const keywords = keyword.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0);
+    
+    const searchDirectory = async (dir) => {
+        try {
+            const entries = await fs.readdir(dir, { withFileTypes: true });
+            
+            for (const entry of entries) {
+                const entryPath = path.join(dir, entry.name);
+                const entryRelativePath = path.relative(STORAGE_ROOT, entryPath);
+                
+                // 检查文件名是否匹配任何关键词
+                const nameLower = entry.name.toLowerCase();
+                const matches = keywords.some(keyword => 
+                    nameLower.includes(keyword)
+                );
+                
+                if (matches) {
+                    const stats = await fs.stat(entryPath);
+                    results.push({
+                        name: entry.name,
+                        type: entry.isDirectory() ? 'folder' : 'file',
+                        size: stats.size,
+                        mtime: stats.mtime,
+                        path: entryRelativePath,
+                    });
+                }
+                
+                // 递归搜索子目录
+                if (entry.isDirectory()) {
+                    await searchDirectory(entryPath);
+                }
+            }
+        } catch (error) {
+            console.error(`搜索目录失败 ${dir}：`, error);
+        }
+    };
+    
+    await searchDirectory(fullPath);
+    
+    // 按文件夹优先、名称排序
+    return results.sort((a, b) => {
+        if (a.type !== b.type) {
+            return a.type === 'folder' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+    });
+};
+
+// === 大文件分片上传相关 ===
+const CHUNK_TEMP_DIR = path.resolve(__dirname, '../temp-chunks');
+
+// 确保临时目录存在
+const ensureTempDir = async () => {
+    if (!fsSync.existsSync(CHUNK_TEMP_DIR)) {
+        await fs.mkdir(CHUNK_TEMP_DIR, { recursive: true });
+    }
+};
+
+// 获取分片存储路径
+const getChunkPath = (md5, index) => {
+    return path.join(CHUNK_TEMP_DIR, `${md5}_chunk_${index}`);
+};
+
+// 上传单个分片
+const uploadChunk = async (chunkBuffer, md5, index) => {
+    await ensureTempDir();
+    const chunkPath = getChunkPath(md5, index);
+    await fs.writeFile(chunkPath, chunkBuffer);
+    return { success: true };
+};
+
+// 检查已上传的分片
+const checkUploadedChunks = async (md5) => {
+    await ensureTempDir();
+    const uploaded = [];
+    
+    try {
+        const files = await fs.readdir(CHUNK_TEMP_DIR);
+        for (const file of files) {
+            if (file.startsWith(`${md5}_chunk_`)) {
+                const index = parseInt(file.split('_chunk_')[1]);
+                uploaded.push(index);
+            }
+        }
+    } catch (error) {
+        console.error('检查分片失败：', error);
+    }
+    
+    return uploaded.sort((a, b) => a - b);
+};
+
+// 合并分片
+const mergeChunks = async (md5, filename, totalChunks, relativePath = '') => {
+    await ensureTempDir();
+    
+    const finalPath = relativePath 
+        ? path.join(STORAGE_ROOT, relativePath, filename)
+        : path.join(STORAGE_ROOT, filename);
+    
+    // 确保目标目录存在
+    const finalDir = path.dirname(finalPath);
+    if (!fsSync.existsSync(finalDir)) {
+        await fs.mkdir(finalDir, { recursive: true });
+    }
+    
+    // 创建写入流
+    const writeStream = fsSync.createWriteStream(finalPath);
+    
+    for (let i = 0; i < totalChunks; i++) {
+        const chunkPath = getChunkPath(md5, i);
+        if (!fsSync.existsSync(chunkPath)) {
+            throw new Error(`分片 ${i} 不存在`);
+        }
+        
+        const chunkBuffer = await fs.readFile(chunkPath);
+        writeStream.write(chunkBuffer);
+        // 删除已合并的分片
+        await fs.unlink(chunkPath);
+    }
+    
+    writeStream.end();
+    
+    return new Promise((resolve, reject) => {
+        writeStream.on('finish', () => {
+            resolve({ success: true, path: finalPath });
+        });
+        writeStream.on('error', reject);
+    });
+};
+
+// 清理过期分片（可在定时任务中调用）
+const cleanExpiredChunks = async (expireHours = 24) => {
+    await ensureTempDir();
+    const now = Date.now();
+    const expireMs = expireHours * 60 * 60 * 1000;
+    
+    try {
+        const files = await fs.readdir(CHUNK_TEMP_DIR);
+        for (const file of files) {
+            const filePath = path.join(CHUNK_TEMP_DIR, file);
+            const stats = await fs.stat(filePath);
+            if (now - stats.mtimeMs > expireMs) {
+                await fs.unlink(filePath);
+            }
+        }
+    } catch (error) {
+        console.error('清理过期分片失败：', error);
+    }
+};
+
+// 获取回收站文件列表
+const getRecycleList = async () => {
+    const RECYCLE_PATH = path.join(STORAGE_ROOT, 'recycle');
+    try {
+        if (!fsSync.existsSync(RECYCLE_PATH)) {
+            return [];
+        }
+        const files = await fs.readdir(RECYCLE_PATH, { withFileTypes: true });
+        const fileList = await Promise.all(
+            files.map(async (file) => {
+                const filePath = path.join(RECYCLE_PATH, file.name);
+                const stats = await fs.stat(filePath);
+                return {
+                    name: file.name,
+                    type: file.isDirectory() ? 'folder' : 'file',
+                    size: stats.size,
+                    mtime: stats.mtime,
+                    path: path.relative(STORAGE_ROOT, filePath),
+                };
+            })
+        );
+        return fileList.sort((a, b) => {
+            if (a.type !== b.type) {
+                return a.type === 'folder' ? -1 : 1;
+            }
+            return a.name.localeCompare(b.name);
+        });
+    } catch (error) {
+        console.error('获取回收站列表失败：', error);
+        return [];
+    }
+};
+
+// 共享列表（内存存储，可扩展为数据库存储）
+let shareList = [];
+
+// 生成分享链接
+const createShare = (filePath, type = 'public', code = '', permission = 'read') => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let link = '';
+    for (let i = 0; i < 8; i++) {
+        link += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    const shareItem = {
+        id: uuidv4(),
+        link,
+        filePath,
+        type,
+        code,
+        permission,
+        views: 0,
+        createdAt: new Date().toISOString()
+    };
+    
+    shareList.push(shareItem);
+    return link;
+};
+
+// 获取分享列表
+const getShareList = () => {
+    return shareList;
+};
+
+// 取消分享
+const cancelShare = (link) => {
+    const index = shareList.findIndex(s => s.link === link);
+    if (index !== -1) {
+        shareList.splice(index, 1);
+        return true;
+    }
+    return false;
+};
+
 module.exports = {
     initStorage,
     unlockAndRelease,
@@ -466,5 +710,14 @@ module.exports = {
     deleteFolder,
     renameFolder,
     isMd5Exists,
-    getFullFilePath
+    getFullFilePath,
+    searchFiles,
+    uploadChunk,
+    checkUploadedChunks,
+    mergeChunks,
+    cleanExpiredChunks,
+    getRecycleList,
+    getShareList,
+    createShare,
+    cancelShare
 };

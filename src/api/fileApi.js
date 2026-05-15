@@ -1,4 +1,5 @@
 import axios from 'axios';
+import SparkMD5 from 'spark-md5';
 
 // 根据当前页面的主机名动态设置后端地址
 const getBackendUrl = () => {
@@ -285,4 +286,130 @@ export const calculateFileMd5 = (file) => {
         reader.onerror = reject;
         reader.readAsArrayBuffer(file);
     });
+};
+
+// === 大文件分片上传相关 ===
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
+
+// 计算文件MD5（分片计算，支持大文件）
+export const calculateFileMd5Chunked = (file) => {
+    return new Promise((resolve, reject) => {
+        const blobSlice = File.prototype.slice;
+        const chunks = Math.ceil(file.size / CHUNK_SIZE);
+        let currentChunk = 0;
+        const spark = new SparkMD5.ArrayBuffer();
+        const fileReader = new FileReader();
+
+        fileReader.onload = (e) => {
+            spark.append(e.target.result);
+            currentChunk++;
+            
+            if (currentChunk < chunks) {
+                loadNext();
+            } else {
+                resolve(spark.end());
+            }
+        };
+
+        fileReader.onerror = reject;
+
+        const loadNext = () => {
+            const start = currentChunk * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
+        };
+
+        loadNext();
+    });
+};
+
+// 检查文件是否已存在（通过MD5）
+export const checkFileExistsByMd5 = async (md5) => {
+    const response = await apiClient.post('/api/files/check-exists-by-md5', { md5 });
+    return response.data;
+};
+
+// 检查已上传的分片
+export const checkUploadedChunks = async (md5) => {
+    const response = await apiClient.post('/api/files/check-chunks', { md5 });
+    return response.data;
+};
+
+// 上传单个分片
+export const uploadChunk = async (file, md5, index, totalChunks, path = '') => {
+    const formData = new FormData();
+    const start = index * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunk = file.slice(start, end);
+    
+    formData.append('chunk', chunk);
+    formData.append('md5', md5);
+    formData.append('index', index.toString());
+    formData.append('totalChunks', totalChunks.toString());
+    if (path) formData.append('path', path);
+    
+    const response = await apiClient.post('/api/files/upload-chunk', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+    return response.data;
+};
+
+// 合并分片
+export const mergeChunks = async (md5, filename, totalChunks, path = '') => {
+    const response = await apiClient.post('/api/files/merge-chunks', {
+        md5,
+        filename,
+        totalChunks,
+        path
+    });
+    return response.data;
+};
+
+// 完整的大文件分片上传流程（支持断点续传）
+export const uploadLargeFile = async (file, path = '', onProgress = () => {}) => {
+    try {
+        // 1. 计算文件MD5
+        onProgress({ status: 'calculating', progress: 0 });
+        const md5 = await calculateFileMd5Chunked(file);
+        
+        // 2. 检查文件是否已存在
+        onProgress({ status: 'checking', progress: 10 });
+        const existCheck = await checkFileExistsByMd5(md5);
+        if (existCheck.data.exists) {
+            return { success: true, message: '文件已存在，无需重复上传' };
+        }
+        
+        // 3. 计算分片数量
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        
+        // 4. 检查已上传的分片（断点续传）
+        onProgress({ status: 'resuming', progress: 15 });
+        const chunkCheck = await checkUploadedChunks(md5);
+        const uploadedChunks = chunkCheck.data.uploaded || [];
+        
+        // 5. 上传所有未上传的分片
+        onProgress({ status: 'uploading', progress: 20 });
+        for (let i = 0; i < totalChunks; i++) {
+            if (uploadedChunks.includes(i)) {
+                continue; // 跳过已上传的分片
+            }
+            
+            await uploadChunk(file, md5, i, totalChunks, path);
+            
+            const progress = 20 + ((i + 1) / totalChunks) * 70;
+            onProgress({ status: 'uploading', progress: Math.round(progress) });
+        }
+        
+        // 6. 合并分片
+        onProgress({ status: 'merging', progress: 95 });
+        const mergeResult = await mergeChunks(md5, file.name, totalChunks, path);
+        
+        onProgress({ status: 'completed', progress: 100 });
+        return mergeResult.data;
+    } catch (error) {
+        onProgress({ status: 'error', progress: 0 });
+        throw error;
+    }
 };

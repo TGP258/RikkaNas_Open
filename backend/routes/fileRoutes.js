@@ -287,4 +287,72 @@ router.get('/preview', async (req, res) => {
     }
 });
 
+// === 大文件分片上传相关接口 ===
+// 检查文件是否已存在（通过MD5）
+router.post('/check-exists-by-md5', async (req, res) => {
+    try {
+        const { md5 } = req.body;
+        if (!md5) {
+            return res.status(400).json({ success: false, error: 'MD5不能为空' });
+        }
+        
+        const exists = await fileUtils.isMd5Exists(md5);
+        res.json({ success: true, data: { exists } });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 检查已上传的分片
+router.post('/check-chunks', async (req, res) => {
+    try {
+        const { md5 } = req.body;
+        if (!md5) {
+            return res.status(400).json({ success: false, error: 'MD5不能为空' });
+        }
+        
+        const uploaded = await fileUtils.checkUploadedChunks(md5);
+        res.json({ success: true, data: { uploaded } });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 上传单个分片
+router.post('/upload-chunk', upload.single('chunk'), async (req, res) => {
+    try {
+        const { md5, index } = req.body;
+        if (!md5 || index === undefined) {
+            return res.status(400).json({ success: false, error: 'MD5和分片索引不能为空' });
+        }
+        
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: '请上传分片文件' });
+        }
+        
+        await fileUtils.uploadChunk(req.file.buffer, md5, parseInt(index));
+        res.json({ success: true, message: '分片上传成功' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 合并分片
+router.post('/merge-chunks', async (req, res) => {
+    try {
+        const { md5, filename, totalChunks, path = '' } = req.body;
+        if (!md5 || !filename || !totalChunks) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'MD5、文件名和总分片数不能为空' 
+            });
+        }
+        
+        const result = await fileUtils.mergeChunks(md5, filename, totalChunks, path);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;
