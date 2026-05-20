@@ -116,9 +116,7 @@
         :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
         @click.stop
     >
-      <div class="menu-item" @click="handleCopy">复制</div>
-      <div class="menu-item" @click="handleCut">剪切</div>
-      <div class="menu-item" @click="handlePaste">粘贴</div>
+      <div class="menu-item" @click="handleMove">移动</div>
       <div class="menu-item" @click="handleDownload">下载</div>
       <div class="menu-item" @click="handleShare">共享文件</div>
       <div class="menu-item" @click="handleRename">重命名</div>
@@ -133,6 +131,31 @@
         <div class="modal-btns">
           <button class="btn primary-btn" @click="confirmRename">确认</button>
           <button class="btn default-btn" @click="renameVisible = false">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动文件弹窗 -->
+    <div v-if="moveVisible" class="modal">
+      <div class="modal-content">
+        <h3>移动到</h3>
+        <div class="folder-tree">
+          <div class="folder-item" @click="navigateMoveTo('')">
+            <span>根目录</span>
+          </div>
+          <div
+              v-for="folder in moveFolderList"
+              :key="folder.path"
+              class="folder-item"
+              :class="{ active: folder.path === selectedMovePath }"
+              @click="selectMoveTarget(folder.path)"
+          >
+            <span>📁 {{ folder.name }}</span>
+          </div>
+        </div>
+        <div class="modal-btns">
+          <button class="btn primary-btn" @click="confirmMove">确认移动</button>
+          <button class="btn default-btn" @click="moveVisible = false">取消</button>
         </div>
       </div>
     </div>
@@ -225,7 +248,7 @@ import { ref, reactive, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   getFileList, uploadFile, downloadFile, deleteFile,
-  renameFile, setClipboard, pasteFile, searchFiles,
+  renameFile, moveFile, searchFiles,
   createFolder, checkFileExists, calculateFileMd5
 } from '@/api/fileApi';
 import axios from 'axios';
@@ -296,6 +319,9 @@ const isSearching = ref(false);
 const contextMenu = ref({ visible: false, x: 0, y: 0, file: null });
 const renameVisible = ref(false);
 const newFileName = ref('');
+const moveVisible = ref(false);
+const moveFolderList = ref([]);
+const selectedMovePath = ref('');
 const showCreateFolderModal = ref(false);
 const newFolderName = ref('');
 const toast = ref({ visible: false, message: '', type: 'success' });
@@ -573,43 +599,60 @@ const closeContextMenu = () => {
   contextMenu.value.visible = false;
 };
 
-// 复制文件
-const handleCopy = () => {
+// 移动文件
+const handleMove = async () => {
   const file = contextMenu.value.file;
-  setClipboard('copy', file.path)
-      .then(() => {
-        showToast('已复制');
-        closeContextMenu();
-      })
-      .catch(error => {
-        showToast(error.response?.data?.error || '复制失败', 'error');
-      });
+  selectedMovePath.value = currentPath.value;
+  
+  // 加载当前目录的文件夹列表
+  try {
+    const response = await getFileList(currentPath.value);
+    moveFolderList.value = response.data.data.filter(item => item.type === 'folder');
+  } catch (error) {
+    console.error('加载文件夹列表失败:', error);
+    moveFolderList.value = [];
+  }
+  
+  moveVisible.value = true;
+  closeContextMenu();
 };
 
-// 剪切文件
-const handleCut = () => {
-  const file = contextMenu.value.file;
-  setClipboard('cut', file.path)
-      .then(() => {
-        showToast('已剪切');
-        closeContextMenu();
-      })
-      .catch(error => {
-        showToast(error.response?.data?.error || '剪切失败', 'error');
-      });
+// 选择移动目标
+const selectMoveTarget = async (path) => {
+  selectedMovePath.value = path;
+  
+  // 加载目标目录的文件夹列表
+  try {
+    const response = await getFileList(path);
+    moveFolderList.value = response.data.data.filter(item => item.type === 'folder');
+  } catch (error) {
+    console.error('加载文件夹列表失败:', error);
+    moveFolderList.value = [];
+  }
 };
 
-// 粘贴文件
-const handlePaste = () => {
-  pasteFile(currentPath.value)
-      .then(() => {
-        showToast('粘贴成功');
-        loadFileList(currentPath.value);
-        closeContextMenu();
-      })
-      .catch(error => {
-        showToast(error.response?.data?.error || '粘贴失败', 'error');
-      });
+// 导航到目录（移动弹窗中）
+const navigateMoveTo = (path) => {
+  selectMoveTarget(path);
+};
+
+// 确认移动
+const confirmMove = async () => {
+  if (!selectedMovePath.value && selectedMovePath.value !== '') {
+    showToast('请选择目标目录', 'error');
+    return;
+  }
+  
+  const sourceFile = contextMenu.value.file;
+  
+  try {
+    await moveFile(sourceFile.path, selectedMovePath.value);
+    showToast('移动成功');
+    moveVisible.value = false;
+    loadFileList(currentPath.value);
+  } catch (error) {
+    showToast(error.response?.data?.error || '移动失败', 'error');
+  }
 };
 
 // 下载文件
@@ -1166,5 +1209,35 @@ watch(currentPath, () => {
   width: 80px;
   height: 80px;
   margin-bottom: 15px;
+}
+
+/* 移动文件弹窗样式 */
+.folder-tree {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  background-color: #fafafa;
+}
+
+.folder-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.folder-item:last-child {
+  border-bottom: none;
+}
+
+.folder-item:hover {
+  background-color: #f0f0f0;
+}
+
+.folder-item.active {
+  background-color: #e8e0f0;
+  font-weight: 500;
 }
 </style>

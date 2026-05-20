@@ -8,6 +8,9 @@ const vault = require('./vault');
 // 根目录（storage）
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
 
+// 回收站目录
+const RECYCLE_ROOT = path.resolve(__dirname, '../storage/recycle');
+
 // MIME类型映射
 const MIME_TYPES = {
     '.txt': 'text/plain',
@@ -359,11 +362,23 @@ const downloadFile = async (req, res, filePath) => {
     }
 };
 
-// 删除文件
+// 删除文件（移动到回收站）
 const deleteFile = async (filePath) => {
     const fullPath = safePath(filePath);
     try {
-        await fs.unlink(fullPath);
+        // 确保回收站目录存在
+        if (!fsSync.existsSync(RECYCLE_ROOT)) {
+            await fs.mkdir(RECYCLE_ROOT, { recursive: true });
+        }
+
+        // 生成带时间戳的唯一文件名避免冲突
+        const fileName = filePath.split('/').pop();
+        const timestamp = Date.now();
+        const recycleFileName = `${timestamp}_${fileName}`;
+        const recyclePath = path.join(RECYCLE_ROOT, recycleFileName);
+
+        // 移动文件到回收站
+        await fs.rename(fullPath, recyclePath);
 
         // 同步到保险库
         const status = vault.getStatus();
@@ -371,9 +386,36 @@ const deleteFile = async (filePath) => {
             await vault.deleteFile(filePath);
         }
 
-        return true;
+        return { success: true, recyclePath: `recycle/${recycleFileName}` };
     } catch (error) {
         console.error('删除文件失败：', error);
+        throw error;
+    }
+};
+
+// 移动文件
+const moveFile = async (sourcePath, targetPath) => {
+    const fullSourcePath = safePath(sourcePath);
+    const fullTargetPath = safePath(targetPath);
+    try {
+        // 确保目标目录存在
+        const targetDir = path.dirname(fullTargetPath);
+        if (!fsSync.existsSync(targetDir)) {
+            await fs.mkdir(targetDir, { recursive: true });
+        }
+
+        // 移动文件
+        await fs.rename(fullSourcePath, fullTargetPath);
+
+        // 同步到保险库
+        const status = vault.getStatus();
+        if (status.exists && status.isUnlocked) {
+            await vault.deleteFile(sourcePath);
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('移动文件失败：', error);
         throw error;
     }
 };
@@ -425,10 +467,23 @@ const createFolder = async (folderName, relativePath = '') => {
 };
 
 // 删除文件夹
+// 删除文件夹（移动到回收站）
 const deleteFolder = async (folderPath) => {
     const fullPath = safePath(folderPath);
     try {
-        await fs.rm(fullPath, { recursive: true });
+        // 确保回收站目录存在
+        if (!fsSync.existsSync(RECYCLE_ROOT)) {
+            await fs.mkdir(RECYCLE_ROOT, { recursive: true });
+        }
+
+        // 生成带时间戳的唯一文件夹名避免冲突
+        const folderName = folderPath.split('/').pop();
+        const timestamp = Date.now();
+        const recycleFolderName = `${timestamp}_${folderName}`;
+        const recyclePath = path.join(RECYCLE_ROOT, recycleFolderName);
+
+        // 移动文件夹到回收站
+        await fs.rename(fullPath, recyclePath);
 
         // 同步到保险库
         const status = vault.getStatus();
@@ -436,7 +491,7 @@ const deleteFolder = async (folderPath) => {
             await vault.deleteFolder(folderPath);
         }
 
-        return true;
+        return { success: true, recyclePath: `recycle/${recycleFolderName}` };
     } catch (error) {
         console.error('删除文件夹失败：', error);
         throw error;
@@ -705,6 +760,7 @@ module.exports = {
     uploadFolder,
     downloadFile,
     deleteFile,
+    moveFile,
     renameFile,
     createFolder,
     deleteFolder,

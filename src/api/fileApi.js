@@ -56,14 +56,9 @@ export const renameFile = (oldPath, newName) => {
     return apiClient.post('/api/files/rename', { oldPath, newName });
 };
 
-// 设置剪贴板（复制/剪切）
-export const setClipboard = (type, path) => {
-    return apiClient.post('/api/files/clipboard', { type, path });
-};
-
-// 粘贴文件
-export const pasteFile = (targetPath) => {
-    return apiClient.post('/api/files/paste', { targetPath });
+// 移动文件到指定目录
+export const moveFile = (sourcePath, targetPath) => {
+    return apiClient.post('/api/files/move', { sourcePath, targetPath });
 };
 
 // 搜索文件

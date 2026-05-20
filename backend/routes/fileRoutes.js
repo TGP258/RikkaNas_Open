@@ -171,37 +171,23 @@ router.post('/rename', async (req, res) => {
     }
 });
 
-// 设置剪贴板（复制/剪切）
-router.post('/clipboard', async (req, res) => {
+// 移动文件/文件夹到指定目录
+router.post('/move', async (req, res) => {
     try {
-        const { type, path } = req.body; // type: copy/cut
-        const result = fileUtils.setClipboard(type, path);
-        res.json({ success: true, data: result });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// 粘贴文件
-router.post('/paste', async (req, res) => {
-    try {
-        const { targetPath = '' } = req.body;
-        const clipboard = fileUtils.getClipboard();
-        if (!clipboard.type || !clipboard.path) {
-            return res.status(400).json({ success: false, error: '剪贴板为空' });
+        const { sourcePath, targetPath } = req.body;
+        
+        if (!sourcePath || !targetPath) {
+            return res.status(400).json({ success: false, error: '源路径和目标路径不能为空' });
         }
+        
         // 拼接目标路径
-        const sourceName = clipboard.path.split('/').pop();
+        const sourceName = sourcePath.split('/').pop();
         const targetFullPath = `${targetPath}/${sourceName}`;
-        // 执行复制/剪切
-        if (clipboard.type === 'copy') {
-            await fileUtils.copyFile(clipboard.path, targetFullPath);
-        } else if (clipboard.type === 'cut') {
-            await fileUtils.moveFile(clipboard.path, targetFullPath);
-            // 剪切后清空剪贴板
-            fileUtils.setClipboard('', '');
-        }
-        res.json({ success: true, message: '粘贴成功' });
+        
+        // 执行移动操作
+        await fileUtils.moveFile(sourcePath, targetFullPath);
+        
+        res.json({ success: true, message: '移动成功' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
