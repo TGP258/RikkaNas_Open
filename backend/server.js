@@ -70,6 +70,27 @@ db.connect((err) => {
         } else {
             console.log('用户表已就绪');
         }
+
+        // 创建共享表
+        const createShareTableQuery = `
+        CREATE TABLE IF NOT EXISTS share (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          link VARCHAR(20) NOT NULL UNIQUE,
+          filePath VARCHAR(500) NOT NULL,
+          type VARCHAR(20) DEFAULT 'public',
+          code VARCHAR(10) DEFAULT '',
+          permission VARCHAR(20) DEFAULT 'read',
+          views INT DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`;
+
+        db.query(createShareTableQuery, (err) => {
+            if (err) {
+                console.error('创建共享表失败:', err);
+            } else {
+                console.log('共享表已就绪');
+            }
+        });
     });
 });
 
@@ -360,59 +381,68 @@ app.post('/api/recycle/delete', async (req, res) => {
 });
 
 app.post('/api/share/create', (req, res) => {
-    const { filePath } = req.body;
-    const link = fileUtils.createShare(filePath);
-    res.json({ success: true, link });
-});
-
-app.get('/api/share/:link', async (req, res) => {
-    const { link } = req.params;
-    const share = fileUtils.getShareList().find(s => s.link === link);
-    if (!share) return res.status(404).send('共享不存在');
-
-    share.views++;
-    const filePath = fileUtils.safePath(share.filePath);
-    res.download(filePath);
-});
-
-app.post('/api/share/create', (req, res) => {
     const { filePath, type, code, permission } = req.body;
-    const link = fileUtils.createShare(filePath, type, code, permission);
-    res.json({ success: true, link });
+    
+    // 生成8位随机链接
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let link = '';
+    for (let i = 0; i < 8; i++) {
+        link += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    const sql = 'INSERT INTO share (link, filePath, type, code, permission) VALUES (?, ?, ?, ?, ?)';
+    db.query(sql, [link, filePath, type || 'public', code || '', permission || 'read'], (err, result) => {
+        if (err) {
+            console.error('创建共享失败:', err);
+            return res.status(500).json({ success: false, error: '创建共享失败' });
+        }
+        res.json({ success: true, link });
+    });
 });
 
 app.get('/api/share/list', (req, res) => {
-    res.json({ success: true, data: fileUtils.getShareList() });
+    const sql = 'SELECT * FROM share ORDER BY created_at DESC';
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('获取共享列表失败:', err);
+            return res.status(500).json({ success: false, error: '获取共享列表失败' });
+        }
+        res.json({ success: true, data: results });
+    });
 });
 
 app.post('/api/share/cancel', (req, res) => {
     const { link } = req.body;
-    fileUtils.cancelShare(link);
-    res.json({ success: true });
-});
-
-app.post('/api/share/info', (req, res) => {
-    const { link } = req.body;
-    const share = fileUtils.getShareByLink(link);
-    if (!share) return res.json({ success: false });
-    res.json({ success: true, data: share });
+    const sql = 'DELETE FROM share WHERE link = ?';
+    db.query(sql, [link], (err, result) => {
+        if (err) {
+            console.error('取消共享失败:', err);
+            return res.status(500).json({ success: false, error: '取消共享失败' });
+        }
+        res.json({ success: true });
+    });
 });
 
 app.get('/api/share/:link', (req, res) => {
-    const share = fileUtils.getShareByLink(req.params.link);
-    if (!share) return res.status(404).send('共享不存在或已取消');
-    share.views++;
-    res.download(fileUtils.safePath(share.filePath));
-});
-
-app.get('/api/share/list', (req, res) => {
-    res.json({ success: true, data: fileUtils.getShareList() });
-});
-
-app.post('/api/share/cancel', (req, res) => {
-    const { link } = req.body;
-    fileUtils.cancelShare(link);
-    res.json({ success: true });
+    const { link } = req.params;
+    const sql = 'SELECT * FROM share WHERE link = ?';
+    db.query(sql, [link], (err, results) => {
+        if (err) {
+            console.error('获取共享信息失败:', err);
+            return res.status(500).json({ success: false, error: '获取共享信息失败' });
+        }
+        if (results.length === 0) {
+            return res.status(404).send('共享不存在或已取消');
+        }
+        
+        const share = results[0];
+        // 增加访问次数
+        const updateSql = 'UPDATE share SET views = views + 1 WHERE link = ?';
+        db.query(updateSql, [link], () => {});
+        
+        const filePath = fileUtils.safePath(share.filePath);
+        res.download(filePath);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
