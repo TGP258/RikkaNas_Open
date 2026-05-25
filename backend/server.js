@@ -451,16 +451,16 @@ app.listen(PORT, '0.0.0.0', async () => {
 
   try {
     const webdav = require('./utils/webdav');
-    await webdav.start(3001);
+    await webdav.start(3003);
     console.log('===========================================');
     console.log('WebDAV 服务已启动!');
-    console.log('服务地址: http://localhost:3001');
+    console.log('服务地址: http://localhost:3003');
     console.log('===========================================');
     console.log('Windows 映射网络驱动器:');
     console.log('  net use Z: \\\\localhost\\webdav /user:username password');
     console.log('');
     console.log('Mac/Linux 挂载:');
-    console.log('  mount -t webdav http://localhost:3001 /mnt/webdav');
+    console.log('  mount -t webdav http://localhost:3003 /mnt/webdav');
     console.log('===========================================');
   } catch (err) {
     console.error('WebDAV 启动失败:', err.message);

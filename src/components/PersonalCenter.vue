@@ -1,6 +1,6 @@
 <template>
   <div class="personal-center">
-    <div class="container">
+    <div class="container" :class="{ 'dark-mode': isDarkMode }">
       <h2>个人中心</h2>
 
       <div class="tabs">
@@ -101,6 +101,9 @@
 
 <script>
 import axios from 'axios'
+import { useIniConfigStore } from '@/stores/iniConfigStore';
+import { computed } from 'vue';
+
 export default {
   data() {
     return {
@@ -114,7 +117,17 @@ export default {
       typeCount:{ image:0, doc:0, video:0, zip:0 }
     }
   },
+  computed: {
+    isDarkMode() {
+      const configStore = useIniConfigStore();
+      return configStore.iniData.Appearance?.theme === '开';
+    }
+  },
   mounted() {
+    // 加载系统配置
+    const configStore = useIniConfigStore();
+    configStore.fetchIniConfig();
+    
     this.loadUser()
     this.loadStorage()
     this.loadRecycle()
@@ -412,5 +425,72 @@ export default {
   .file-actions {
     margin-top: 8px;
   }
+}
+
+/* 深色模式样式 */
+.container.dark-mode {
+  background: rgba(30, 30, 30, 0.95);
+  color: #e0e0e0;
+}
+
+.container.dark-mode h2 {
+  color: #e0e0e0;
+}
+
+.container.dark-mode .tabs button {
+  background: #2a2a2a;
+  color: #b0b0b0;
+  border-color: #333;
+}
+
+.container.dark-mode .tabs button.active {
+  background: #b388ff;
+  color: #1e1e1e;
+}
+
+.container.dark-mode .panel,
+.container.dark-mode .info-item,
+.container.dark-mode .form-item,
+.container.dark-mode .stat-item,
+.container.dark-mode .file-item,
+.container.dark-mode .share-item {
+  background: #1e1e1e;
+  border-color: #333;
+  color: #e0e0e0;
+}
+
+.container.dark-mode .info-item label,
+.container.dark-mode .form-item label,
+.container.dark-mode .stat-label {
+  color: #b0b0b0;
+}
+
+.container.dark-mode .progress .bar {
+  background: linear-gradient(90deg, #b388ff, #7c4dff);
+}
+
+.container.dark-mode input {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.container.dark-mode input:focus {
+  border-color: #b388ff;
+}
+
+.container.dark-mode .save-btn,
+.container.dark-mode .action-btn.primary {
+  background: #b388ff;
+  color: #1e1e1e;
+}
+
+.container.dark-mode .action-btn.danger {
+  background: #ff5252;
+  color: white;
+}
+
+.container.dark-mode .empty {
+  color: #888;
 }
 </style>

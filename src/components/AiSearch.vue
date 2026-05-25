@@ -1,6 +1,6 @@
 <template>
   <div class="ai-search-page">
-    <div class="container">
+    <div class="container" :class="{ 'dark-mode': isDarkMode }">
       <h2>AI 智能文件查询</h2>
       <p>使用自然语言描述文件，AI 自动帮你搜索</p>
 
@@ -40,6 +40,7 @@
 <script>
 import axios from 'axios'
 import { downloadFile } from '@/api/fileApi.js'
+import { useIniConfigStore } from '@/stores/iniConfigStore';
 
 export default {
   name: 'AiSearch',
@@ -51,6 +52,17 @@ export default {
       resultList: [],
       baseURL: 'http://localhost:3000'
     }
+  },
+  computed: {
+    isDarkMode() {
+      const configStore = useIniConfigStore();
+      return configStore.iniData.Appearance?.theme === '开';
+    }
+  },
+  mounted() {
+    // 加载系统配置
+    const configStore = useIniConfigStore();
+    configStore.fetchIniConfig();
   },
   methods: {
     async startAiSearch() {
@@ -271,5 +283,72 @@ textarea:focus {
   padding: 30px 0;
   color: #999;
   font-size: 14px;
+}
+
+/* 深色模式样式 */
+.container.dark-mode {
+  background: rgba(30, 30, 30, 0.95);
+  color: #e0e0e0;
+}
+
+.container.dark-mode h2 {
+  color: #e0e0e0;
+}
+
+.container.dark-mode p {
+  color: #b0b0b0;
+}
+
+.container.dark-mode textarea {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.container.dark-mode textarea:focus {
+  border-color: #b388ff;
+}
+
+.container.dark-mode .input-box button {
+  background: linear-gradient(90deg, #7c4dff, #b388ff);
+}
+
+.container.dark-mode .input-box button:disabled {
+  background: #4a4a4a;
+  color: #888;
+}
+
+.container.dark-mode .result-list h3 {
+  color: #e0e0e0;
+  border-bottom-color: #333;
+}
+
+.container.dark-mode .file-item {
+  border-bottom-color: #333;
+}
+
+.container.dark-mode .file-item:hover {
+  background: #2a2a2a;
+}
+
+.container.dark-mode .file-item .icon {
+  color: #b388ff;
+}
+
+.container.dark-mode .file-item .name {
+  color: #e0e0e0;
+}
+
+.container.dark-mode .download-btn {
+  background: #b388ff;
+  color: #1e1e1e;
+}
+
+.container.dark-mode .download-btn:hover {
+  background: #7c4dff;
+}
+
+.container.dark-mode .empty-tip {
+  color: #888;
 }
 </style>

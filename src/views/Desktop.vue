@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" :class="{ 'dark-mode': isDarkMode }">
     <!-- 顶部头部 -->
     <div class="header">
       <div class="logo-section">
@@ -48,9 +48,16 @@ import axios from 'axios';
 import {ref, computed, onMounted} from 'vue'
 import { useRouter } from 'vue-router'
 import AppFooter from '../components/AppFooter.vue';
+import { useIniConfigStore } from '@/stores/iniConfigStore';
 
 const router = useRouter()
 const userName = ref('');
+
+// 深色模式状态
+const configStore = useIniConfigStore();
+const isDarkMode = computed(() => {
+  return configStore.iniData.Appearance?.theme === '开';
+});
 
 // 获取后端URL
 const getBackendUrl = () => {
@@ -108,6 +115,8 @@ const handleLogout = () => {
 
 onMounted(async () => {
   try {
+    // 加载系统配置
+    await configStore.fetchIniConfig();
     const response = await axios.get(`${getBackendUrl()}/api/system/stats`);
     if (response.data.code === 200) {
       stats.value = response.data.data;
@@ -310,5 +319,67 @@ onMounted(async () => {
   .stats-grid { grid-template-columns: 1fr; } /* 小屏改为1列 */
   .dashboard { grid-template-columns: 1fr; }
   .quick-actions { justify-content: center; }
+}
+
+/* 深色模式样式 */
+.dark-mode {
+  background: rgba(30, 30, 30, 0.95) !important;
+  color: #e0e0e0;
+}
+
+.dark-mode .header {
+  border-bottom-color: #333;
+}
+
+.dark-mode .logo-section h1 {
+  color: #e0e0e0;
+}
+
+.dark-mode .user-info span {
+  color: #b0b0b0;
+}
+
+.dark-mode .stat-card,
+.dark-mode .card {
+  background: #1e1e1e;
+  border-color: #333;
+}
+
+.dark-mode .stat-label,
+.dark-mode .card-title {
+  color: #b0b0b0;
+}
+
+.dark-mode .stat-value,
+.dark-mode .card-icon {
+  color: #b388ff;
+}
+
+.dark-mode .card-icon {
+  background: #2a2a2a;
+}
+
+.dark-mode .card-content p {
+  color: #888;
+}
+
+.dark-mode .action-btn {
+  background: #1e1e1e;
+  color: #b388ff;
+  border-color: #b388ff;
+}
+
+.dark-mode .action-btn:hover {
+  background: #b388ff;
+  color: #1e1e1e;
+}
+
+.dark-mode .logout-btn {
+  background: #b388ff;
+  color: #1e1e1e;
+}
+
+.dark-mode .logout-btn:hover {
+  background: #d4b3ff;
 }
 </style>

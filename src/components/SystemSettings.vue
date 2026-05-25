@@ -1,19 +1,19 @@
 <template>
-  <div class="container">
+  <div class="container" :class="{ 'dark-mode': isDarkMode }">
     <!-- 顶部头部 -->
     <div class="header">
       <div class="logo-section">
         <img class="logo" src="../assets/RkCloudLOGO.png" alt="RikkaNas Logo">
-        <h1>系统设置</h1>
+        <h1>{{ labels.systemSettings }}</h1>
       </div>
       <div class="user-info">
-        <button class="action-btn" @click="goToDesktop">返回桌面</button>
+        <button class="action-btn" @click="goToDesktop">{{ labels.backToDesktop }}</button>
       </div>
     </div>
 
     <!-- 系统状态概览 - 4列网格 -->
     <div class="stats-grid">
-      <div class="stat-card" v-for="stat in stats" :key="stat.label">
+      <div class="stat-card" v-for="stat in statsWithLabels" :key="stat.label">
         <div class="stat-label">{{ stat.label }}</div>
         <div class="stat-value">{{ stat.value }}</div>
       </div>
@@ -21,7 +21,7 @@
 
     <!-- 磁盘空间详情 -->
     <div class="disks-section">
-      <h3 class="section-title">磁盘空间</h3>
+      <h3 class="section-title">{{ labels.diskSpace }}</h3>
       <div class="disks-list">
         <div class="disk-row" v-for="disk in disks" :key="disk.mount">
           <div class="disk-info-left">
@@ -33,9 +33,9 @@
               <div class="disk-bar" :style="{ width: disk.useValue + '%' }"></div>
             </div>
             <div class="disk-stats">
-              <span class="disk-stat">已用: {{ disk.used }}</span>
-              <span class="disk-stat">剩余: {{ disk.available }}</span>
-              <span class="disk-stat">总计: {{ disk.size }}</span>
+              <span class="disk-stat">{{ isChinese ? '已用' : 'Used' }}: {{ disk.used }}</span>
+              <span class="disk-stat">{{ isChinese ? '剩余' : 'Available' }}: {{ disk.available }}</span>
+              <span class="disk-stat">{{ isChinese ? '总计' : 'Total' }}: {{ disk.size }}</span>
               <span class="disk-percent">{{ disk.usePercent }}</span>
             </div>
           </div>
@@ -49,67 +49,67 @@
       <div class="content-left">
         <!-- 系统信息 -->
         <div class="info-section">
-          <h3 class="section-title">系统信息</h3>
+          <h3 class="section-title">{{ labels.systemInfo }}</h3>
           <div class="settings-list">
             <div class="setting-item">
               <div class="setting-label">
-                <span>设备IP</span>
+                <span>{{ labels.deviceIp }}</span>
               </div>
               <div class="setting-control">
                 <input
                   v-model="deviceIp"
                   type="text"
                   class="edit-input"
-                  placeholder="输入IP地址"
+                  :placeholder="labels.inputIp"
                 />
               </div>
             </div>
             <div class="setting-item">
               <div class="setting-label">
-                <span>操作系统</span>
+                <span>{{ labels.os }}</span>
               </div>
               <div class="setting-control">
-                <span class="value-text">{{ systemDetails.osName || '加载中...' }}</span>
+                <span class="value-text">{{ systemDetails.osName || labels.loading }}</span>
               </div>
             </div>
             <div class="setting-item">
               <div class="setting-label">
-                <span>系统类型</span>
+                <span>{{ labels.systemType }}</span>
               </div>
               <div class="setting-control">
-                <span class="value-text">{{ systemDetails.osType || '加载中...' }}</span>
+                <span class="value-text">{{ systemDetails.osType || labels.loading }}</span>
               </div>
             </div>
             <div class="setting-item">
               <div class="setting-label">
-                <span>系统版本</span>
+                <span>{{ labels.systemVersion }}</span>
               </div>
               <div class="setting-control">
-                <span class="value-text">{{ systemDetails.osVersion || '加载中...' }}</span>
+                <span class="value-text">{{ systemDetails.osVersion || labels.loading }}</span>
               </div>
             </div>
             <div class="setting-item">
               <div class="setting-label">
-                <span>处理器</span>
+                <span>{{ labels.processor }}</span>
               </div>
               <div class="setting-control">
-                <span class="value-text">{{ systemDetails.cpuModel || '加载中...' }}</span>
+                <span class="value-text">{{ systemDetails.cpuModel || labels.loading }}</span>
               </div>
             </div>
             <div class="setting-item">
               <div class="setting-label">
-                <span>核心/线程</span>
+                <span>{{ labels.cores }}</span>
               </div>
               <div class="setting-control">
-                <span class="value-text">{{ systemDetails.cpuCores ? systemDetails.cpuCores + ' 核心' : '加载中...' }}</span>
+                <span class="value-text">{{ systemDetails.cpuCores ? systemDetails.cpuCores + (isChinese ? ' 核心' : ' Cores') : labels.loading }}</span>
               </div>
             </div>
             <div class="setting-item">
               <div class="setting-label">
-                <span>主机名</span>
+                <span>{{ labels.hostname }}</span>
               </div>
               <div class="setting-control">
-                <span class="value-text">{{ systemDetails.hostname || '加载中...' }}</span>
+                <span class="value-text">{{ systemDetails.hostname || labels.loading }}</span>
               </div>
             </div>
           </div>
@@ -117,14 +117,14 @@
 
         <!-- 管理员菜单 -->
         <div class="settings-section-wrapper">
-          <h3 class="section-title">管理员中心</h3>
+          <h3 class="section-title">{{ labels.adminCenter }}</h3>
           <div class="setting-item">
             <div class="setting-label">
-              <span>账户管理</span>
+              <span>{{ labels.accountManagement }}</span>
             </div>
             <div class="setting-control">
               <button class="admin-btn-inside" @click="goToUserAdmin">
-                进入管理
+                {{ labels.goToAdmin }}
               </button>
             </div>
           </div>
@@ -135,7 +135,7 @@
       <div class="content-right">
         <!-- 动态设置列表 -->
         <div class="settings-section-wrapper">
-          <h3 class="section-title">系统配置</h3>
+          <h3 class="section-title">{{ labels.systemConfig }}</h3>
           <div v-for="(sectionData, sectionName) in configStore.iniData" :key="sectionName" class="settings-subsection">
             <h4 class="subsection-title">{{ sectionName }}</h4>
             <div v-for="(value, key) in sectionData" :key="key" class="setting-item">
@@ -149,7 +149,7 @@
                   :value="value"
                   @blur="updateValue(sectionName, key, $event)"
                   class="edit-input"
-                  placeholder="输入新值"
+                  :placeholder="labels.inputNewValue"
                 />
                 <label v-else-if="!isNoSwitchKey(key)" class="switch">
                   <input
@@ -172,8 +172,8 @@
 
     <!-- 重置和导出按钮 -->
     <div class="action-buttons">
-      <button @click="resetSettings" class="action-btn reset-btn">重置所有设置</button>
-      <button @click="exportSettings" class="action-btn export-btn">导出设置</button>
+      <button @click="resetSettings" class="action-btn reset-btn">{{ labels.resetAllSettings }}</button>
+      <button @click="exportSettings" class="action-btn export-btn">{{ labels.exportSettings }}</button>
     </div>
 
     <AppFooter></AppFooter>
@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useIniConfigStore } from '@/stores/iniConfigStore';
 import { useRouter } from 'vue-router';
 import { getLocalIp } from '@/api/fileApi';
@@ -197,13 +197,65 @@ const goToUserAdmin = () => {
 
 const configStore = useIniConfigStore();
 const message = ref('');
-const deviceIp = ref('加载中...');
+const deviceIp = ref('');
+
+// 深色模式状态
+const isDarkMode = computed(() => {
+  return configStore.iniData.Appearance?.theme === '开';
+});
+
+// 语言状态（中文界面开关）
+const isChinese = computed(() => {
+  return configStore.iniData.Language?.language !== '关';
+});
+
+// 多语言标签
+const labels = computed(() => {
+  const zh = isChinese.value;
+  return {
+    systemSettings: zh ? '系统设置' : 'System Settings',
+    backToDesktop: zh ? '返回桌面' : 'Back to Desktop',
+    diskSpace: zh ? '磁盘空间' : 'Disk Space',
+    systemInfo: zh ? '系统信息' : 'System Information',
+    deviceIp: zh ? '设备IP' : 'Device IP',
+    inputIp: zh ? '输入IP地址' : 'Enter IP Address',
+    os: zh ? '操作系统' : 'Operating System',
+    systemType: zh ? '系统类型' : 'System Type',
+    systemVersion: zh ? '系统版本' : 'System Version',
+    processor: zh ? '处理器' : 'Processor',
+    cores: zh ? '核心/线程' : 'Cores/Threads',
+    hostname: zh ? '主机名' : 'Hostname',
+    adminCenter: zh ? '管理员中心' : 'Admin Center',
+    accountManagement: zh ? '账户管理' : 'Account Management',
+    goToAdmin: zh ? '进入管理' : 'Go to Admin',
+    systemConfig: zh ? '系统配置' : 'System Configuration',
+    inputNewValue: zh ? '输入新值' : 'Enter new value',
+    resetAllSettings: zh ? '重置所有设置' : 'Reset All Settings',
+    exportSettings: zh ? '导出设置' : 'Export Settings',
+    loading: zh ? '加载中...' : 'Loading...',
+    totalStorage: zh ? '总存储空间' : 'Total Storage',
+    usedStorage: zh ? '已使用空间' : 'Used Storage',
+    usageRate: zh ? '使用率' : 'Usage Rate',
+    systemStatus: zh ? '系统状态' : 'System Status',
+  };
+});
+
+// 带标签的统计数据
+const statsWithLabels = computed(() => {
+  const l = labels.value;
+  return [
+    { value: stats.value[0]?.value || l.loading, label: l.totalStorage },
+    { value: stats.value[1]?.value || l.loading, label: l.usedStorage },
+    { value: stats.value[2]?.value || l.loading, label: l.usageRate },
+    { value: stats.value[3]?.value || l.loading, label: l.systemStatus },
+  ];
+});
 
 const stats = ref([
-  { value: '加载中...', label: '总存储空间' },
-  { value: '加载中...', label: '已使用空间' },
-  { value: '加载中...', label: '使用率' },
-  { value: '加载中...', label: '系统状态' }
+  { value: '', label: '' },
+  { value: '', label: '' },
+  { value: '', label: '' },
+  { value: '', label: '' }
 ]);
 
 const disks = ref([]);
@@ -226,15 +278,16 @@ const isOn = (value) => {
 };
 
 const getLabelForKey = (key) => {
+  const isZh = isChinese.value;
   const labelMap = {
-    theme: '深色模式',
-    language: '中文界面',
-    enabled: '启用通知',
-    app_name: '系统版本',
-    version: '版本号',
-    device_name: '设备名',
-    dark_mode: '深色模式',
-    api_key: 'API 密钥',
+    theme: isZh ? '深色模式' : 'Dark Mode',
+    language: isZh ? '中文界面' : 'English Interface',
+    enabled: isZh ? '启用通知' : 'Enable Notifications',
+    app_name: isZh ? '系统版本' : 'System Version',
+    version: isZh ? '版本号' : 'Version',
+    device_name: isZh ? '设备名' : 'Device Name',
+    dark_mode: isZh ? '深色模式' : 'Dark Mode',
+    api_key: isZh ? 'API 密钥' : 'API Key',
   };
   return labelMap[key] || key;
 };
@@ -252,10 +305,10 @@ const updateValue = async (section, key, event) => {
         console.log('密钥长度:', newValue.length);
       }
       const label = getLabelForKey(key);
-      message.value = `${label} 已更新`;
+      message.value = `${label} ${isChinese.value ? '已更新' : 'Updated'}`;
       setTimeout(() => message.value = '', 3000);
     } catch (error) {
-      message.value = `保存失败: ${error.message}`;
+      message.value = `${isChinese.value ? '保存失败' : 'Save failed'}: ${error.message}`;
       setTimeout(() => message.value = '', 3000);
     }
   }
@@ -267,10 +320,11 @@ const toggleSwitch = async (section, key, event) => {
   try {
     await configStore.saveIniConfig();
     const label = getLabelForKey(key);
-    message.value = `${label} 已 ${newValue}`;
+    const statusText = newValue === '开' ? (isChinese.value ? '已开启' : 'Enabled') : (isChinese.value ? '已关闭' : 'Disabled');
+    message.value = `${label} ${statusText}`;
     setTimeout(() => message.value = '', 3000);
   } catch (error) {
-    message.value = `保存失败: ${error.message}`;
+    message.value = `${isChinese.value ? '保存失败' : 'Save failed'}: ${error.message}`;
     setTimeout(() => message.value = '', 3000);
   }
 };
@@ -283,10 +337,10 @@ const resetSettings = async () => {
   };
   try {
     await configStore.saveIniConfig();
-    message.value = '设置已重置并保存';
+    message.value = isChinese.value ? '设置已重置并保存' : 'Settings have been reset and saved';
     setTimeout(() => message.value = '', 3000);
   } catch (error) {
-    message.value = `重置失败: ${error.message}`;
+    message.value = `${isChinese.value ? '重置失败' : 'Reset failed'}: ${error.message}`;
     setTimeout(() => message.value = '', 3000);
   }
 };
@@ -300,7 +354,7 @@ const exportSettings = () => {
   a.download = 'system-settings.json';
   a.click();
   URL.revokeObjectURL(url);
-  message.value = '设置已导出';
+  message.value = isChinese.value ? '设置已导出' : 'Settings exported';
   setTimeout(() => message.value = '', 3000);
 };
 
@@ -310,10 +364,10 @@ const fetchDeviceIp = async () => {
     if (response.data.code === 200) {
       deviceIp.value = response.data.data.ip;
     } else {
-      deviceIp.value = '获取失败';
+      deviceIp.value = isChinese.value ? '获取失败' : 'Failed to get';
     }
   } catch (error) {
-    deviceIp.value = '获取失败';
+    deviceIp.value = isChinese.value ? '获取失败' : 'Failed to get';
   }
 };
 
@@ -350,7 +404,7 @@ onMounted(async () => {
     await fetchDeviceIp();
     await fetchSystemStats();
   } catch (error) {
-    message.value = `加载配置失败: ${error.message}`;
+    message.value = `${isChinese.value ? '加载配置失败' : 'Failed to load configuration'}: ${error.message}`;
     setTimeout(() => message.value = '', 3000);
   }
 });
@@ -780,5 +834,129 @@ input:checked + .slider:before {
   .disk-stats { justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   .edit-input { width: 150px; }
   .action-buttons { flex-direction: column; }
+}
+
+/* 深色模式样式 */
+.dark-mode {
+  background: rgba(30, 30, 30, 0.95) !important;
+  color: #e0e0e0;
+}
+
+.dark-mode .header {
+  border-bottom-color: #444;
+}
+
+.dark-mode .logo-section h1,
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4 {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .section-title {
+  color: #e0e0e0;
+  border-bottom-color: #6800c1;
+}
+
+.dark-mode .subsection-title {
+  background: #2a2a2a;
+  color: #b0b0b0;
+}
+
+.dark-mode .stat-card,
+.dark-mode .info-section,
+.dark-mode .settings-section-wrapper,
+.dark-mode .settings-list,
+.dark-mode .disk-row,
+.dark-mode .setting-item {
+  background: #1e1e1e;
+  border-color: #333;
+  color: #e0e0e0;
+}
+
+.dark-mode .stat-card:hover,
+.dark-mode .disk-row:hover,
+.dark-mode .setting-item:hover {
+  border-color: #6800c1;
+}
+
+.dark-mode .stat-label,
+.dark-mode .disk-stat,
+.dark-mode .disk-percent,
+.dark-mode .value-text {
+  color: #b0b0b0;
+}
+
+.dark-mode .stat-value {
+  color: #b388ff;
+}
+
+.dark-mode .setting-label span {
+  color: #e0e0e0;
+}
+
+.dark-mode .disk-mount {
+  color: #e0e0e0;
+}
+
+.dark-mode .disk-type {
+  background: #333;
+  color: #b0b0b0;
+}
+
+.dark-mode .disk-bar-container {
+  background: #333;
+}
+
+.dark-mode .edit-input {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+.dark-mode .edit-input:focus {
+  border-color: #6800c1;
+}
+
+.dark-mode .admin-btn-inside,
+.dark-mode .export-btn {
+  background: #6800c1;
+}
+
+.dark-mode .admin-btn-inside:hover,
+.dark-mode .export-btn:hover {
+  background: #7c4dff;
+}
+
+.dark-mode .reset-btn {
+  background: #1e1e1e;
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.dark-mode .reset-btn:hover {
+  background: #ff6b6b;
+  color: #fff;
+}
+
+.dark-mode .action-btn {
+  background: #333;
+  color: #e0e0e0;
+}
+
+.dark-mode .action-btn:hover {
+  background: #444;
+}
+
+.dark-mode .info-tip {
+  background: #2a2a2a;
+  color: #b388ff;
+  border-left-color: #6800c1;
+}
+
+.dark-mode .action-btn:not(.reset-btn):not(.export-btn) {
+  background: #333;
+  color: #e0e0e0;
 }
 </style>

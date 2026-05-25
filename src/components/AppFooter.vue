@@ -1,32 +1,35 @@
 <template>
-  <footer class="app-footer">
+  <footer class="app-footer" :class="{ 'dark-mode': isDarkMode }">
     <div class="footer-container">
       <div class="footer-info">
-        <span>© 2026 RkCloud 本地网盘系统</span>
+        <span>© 2026 RkCloud {{ isChinese ? '本地网盘系统' : 'Local Cloud Storage' }}</span>
         <span class="separator">|</span>
-        <span>版本：Beta1.0.8</span>
+        <span>{{ isChinese ? '版本' : 'Version' }}：Beta1.0.8</span>
       </div>
       <div class="footer-extra">
-        <span>本地部署版 | 基于Vue + Node.js开发</span>
+        <span>{{ isChinese ? '本地部署版' : 'Local Deployment' }} | {{ isChinese ? '基于' : 'Built with' }}Vue + Node.js{{ isChinese ? '开发' : '' }}</span>
         <span class="separator">|</span>
-        <span>技术支持：RikkaDev</span>
+        <span>{{ isChinese ? '技术支持' : 'Support' }}：RikkaDev</span>
         <span class="separator">|</span>
-        <span>梨花云</span>
+        <span>RikkaCloud</span>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup>
-// 可选：如果需要动态获取版本/时间，可在这里添加逻辑
-// 例如从后端接口获取系统版本
-// import { onMounted, ref } from 'vue';
-// import axios from 'axios';
-// const version = ref('v1.0.0');
-// onMounted(async () => {
-//   const res = await axios.get('/api/system/version');
-//   version.value = res.data.version;
-// });
+import { computed } from 'vue';
+import { useIniConfigStore } from '@/stores/iniConfigStore';
+
+const configStore = useIniConfigStore();
+
+const isDarkMode = computed(() => {
+  return configStore.iniData.Appearance?.theme === '开';
+});
+
+const isChinese = computed(() => {
+  return configStore.iniData.Language?.language !== '关';
+});
 </script>
 
 <style scoped>
@@ -58,5 +61,21 @@
 .footer-extra {
   font-size: 12px;
   color: #999;
+}
+
+/* 深色模式 */
+.dark-mode {
+  background-color: #1e1e1e;
+  border-top-color: #333;
+}
+
+.dark-mode .footer-container,
+.dark-mode .footer-info,
+.dark-mode .footer-extra {
+  color: #b0b0b0;
+}
+
+.dark-mode .separator {
+  color: #666;
 }
 </style>

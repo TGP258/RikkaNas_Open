@@ -1,5 +1,5 @@
 <template>
-  <div class="file-manager">
+  <div class="file-manager" :class="{ 'dark-mode': isDarkMode }">
     <div class="logo-section">
       <img class="logo" src="../assets/RkCloudLOGO.png" alt="RikkaNas Logo">
       <h1>RkCloud文件管理器</h1>
@@ -244,8 +244,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useIniConfigStore } from '@/stores/iniConfigStore';
 import {
   getFileList, uploadFile, downloadFile, deleteFile,
   renameFile, moveFile, searchFiles,
@@ -254,6 +255,12 @@ import {
 import axios from 'axios';
 
 const router = useRouter();
+
+// 深色模式状态
+const configStore = useIniConfigStore();
+const isDarkMode = computed(() => {
+  return configStore.iniData.Appearance?.theme === '开';
+});
 
 // 共享相关状态
 const shareModalVisible = ref(false);
@@ -733,7 +740,9 @@ const showToast = (message, type = 'success') => {
 };
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  // 加载系统配置
+  await configStore.fetchIniConfig();
   loadFileList();
   document.addEventListener('click', () => {
     showUploadMenu.value = false;
@@ -1239,5 +1248,167 @@ watch(currentPath, () => {
 .folder-item.active {
   background-color: #e8e0f0;
   font-weight: 500;
+}
+
+/* 深色模式样式 */
+.file-manager.dark-mode {
+  background-color: #1e1e1e;
+}
+
+.file-manager.dark-mode .logo-section h1 {
+  color: #e0e0e0;
+}
+
+.file-manager.dark-mode .toolbar,
+.file-manager.dark-mode .file-list-header,
+.file-manager.dark-mode .file-item {
+  background: #1e1e1e;
+  border-color: #333;
+}
+
+.file-manager.dark-mode .file-list-header {
+  background: #2a2a2a;
+}
+
+.file-manager.dark-mode .path-nav,
+.file-manager.dark-mode .path-nav span {
+  color: #b0b0b0;
+}
+
+.file-manager.dark-mode .path-nav span:hover {
+  color: #b388ff;
+  cursor: pointer;
+}
+
+.file-manager.dark-mode .search-box input {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.file-manager.dark-mode .btn {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.file-manager.dark-mode .btn.primary-btn {
+  background: #b388ff;
+  color: #1e1e1e;
+  border-color: #b388ff;
+}
+
+.file-manager.dark-mode .dropdown-menu {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.file-manager.dark-mode .dropdown-menu .menu-item:hover {
+  background: #3a3a3a;
+}
+
+.file-manager.dark-mode .col-icon,
+.file-manager.dark-mode .col-name,
+.file-manager.dark-mode .col-meta,
+.file-manager.dark-mode .col-time,
+.file-manager.dark-mode .file-name {
+  color: #e0e0e0;
+}
+
+.file-manager.dark-mode .file-item:hover {
+  background: #2a2a2a;
+}
+
+.file-manager.dark-mode .context-menu {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.file-manager.dark-mode .context-menu .menu-item {
+  color: #e0e0e0;
+}
+
+.file-manager.dark-mode .context-menu .menu-item:hover {
+  background: #3a3a3a;
+}
+
+.file-manager.dark-mode .context-menu .menu-item.danger {
+  color: #ff5252;
+}
+
+.file-manager.dark-mode .modal-content {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.file-manager.dark-mode .modal-content h3 {
+  color: #e0e0e0;
+}
+
+.file-manager.dark-mode .modal-content input {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.file-manager.dark-mode .folder-tree {
+  border-color: #444;
+  background-color: #2a2a2a;
+}
+
+.file-manager.dark-mode .folder-item {
+  color: #e0e0e0;
+  border-bottom-color: #333;
+}
+
+.file-manager.dark-mode .folder-item:hover {
+  background-color: #3a3a3a;
+}
+
+.file-manager.dark-mode .folder-item.active {
+  background-color: #3a2a5a;
+}
+
+.file-manager.dark-mode .share-modal .form-group label {
+  color: #b0b0b0;
+}
+
+.file-manager.dark-mode .share-modal input[type="radio"] {
+  accent-color: #b388ff;
+}
+
+.file-manager.dark-mode .share-modal input[type="text"] {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.file-manager.dark-mode .share-link-box {
+  background: #2a2a2a;
+  color: #b388ff;
+}
+
+.file-manager.dark-mode .empty-tip {
+  color: #888;
+}
+
+.file-manager.dark-mode .toast {
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.file-manager.dark-mode .toast.error {
+  background: #ff5252;
+  color: white;
+}
+
+.file-manager.dark-mode .toast.success {
+  background: #b388ff;
+  color: #1e1e1e;
+}
+
+.file-manager.dark-mode .icon-folder,
+.file-manager.dark-mode .icon-file {
+  color: #b388ff;
 }
 </style>

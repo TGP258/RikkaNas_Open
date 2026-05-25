@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" :class="{ 'dark-mode': isDarkMode }">
     <div class="header">
       <h1>账户管理</h1>
       <p>用户管理与系统审计</p>
@@ -134,8 +134,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { useIniConfigStore } from '@/stores/iniConfigStore'
+
+// 深色模式状态
+const configStore = useIniConfigStore();
+const isDarkMode = computed(() => {
+  return configStore.iniData.Appearance?.theme === '开';
+});
 
 // 获取后端URL
 const getBackendUrl = () => {
@@ -234,7 +241,9 @@ const doDelete = async (u) => {
   load()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 加载系统配置
+  await configStore.fetchIniConfig();
   load()
   loadLogs()
 })
@@ -457,5 +466,71 @@ td {
   border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
+}
+
+/* 深色模式样式 */
+.container.dark-mode {
+  background: rgba(30, 30, 30, 0.95);
+  color: #e0e0e0;
+}
+
+.container.dark-mode .header {
+  background: #2a2a2a;
+}
+
+.container.dark-mode .settings-container,
+.container.dark-mode .search-section,
+.container.dark-mode .table-box,
+.container.dark-mode .log-container {
+  background: #1e1e1e;
+}
+
+.container.dark-mode .search-input,
+.container.dark-mode .search-select,
+.container.dark-mode .form-input,
+.container.dark-mode .form-select {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.container.dark-mode thead tr {
+  background: #2a2a2a;
+}
+
+.container.dark-mode th,
+.container.dark-mode td {
+  color: #e0e0e0;
+  border-bottom-color: #333;
+}
+
+.container.dark-mode .log-tabs button {
+  background: #2a2a2a;
+  color: #b0b0b0;
+  border-color: #333;
+}
+
+.container.dark-mode .log-item {
+  color: #e0e0e0;
+  border-bottom-color: #333;
+}
+
+.container.dark-mode .mini-btn {
+  background: #7c4dff;
+  color: white;
+}
+
+.container.dark-mode .modal-card {
+  background: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.container.dark-mode .modal-card h2 {
+  color: #e0e0e0;
+}
+
+.container.dark-mode .cancel-btn {
+  background: #444;
+  color: #e0e0e0;
 }
 </style>
