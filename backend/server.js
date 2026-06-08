@@ -6,6 +6,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const fileRoutes = require('./routes/fileRoutes');
+const vaultRoutes = require('./routes/vaultRoutes');
 const fileUtils = require('./utils/fileUtils');
 const app = express();
 const path = require('path');
@@ -26,6 +27,7 @@ fileUtils.initStorage().then(() => {
 
 app.use('/api/ini', iniRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/vault', vaultRoutes);
 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');

@@ -119,7 +119,6 @@ class VaultManager {
     }
 
     deriveKey(password, salt, purpose) {
-        const info = Buffer.from(`RikkaVault-${purpose}`);
         return crypto.pbkdf2Sync(password, salt, ITERATIONS, KEY_LENGTH, 'sha512').toString('hex');
     }
 
@@ -170,7 +169,6 @@ class VaultManager {
         }
 
         const fileId = `file_${this.currentMetadata.nextId++}`;
-        const encFileName = this.encryptFileName(fileName);
 
         const encryptedData = this.encryptBuffer(fileBuffer, this.containerKey);
 

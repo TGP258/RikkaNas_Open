@@ -5,6 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 const { isMd5Exists } = require('./md5Check');
 const vault = require('./vault');
 
+const DEFAULT_VAULT_PASSWORD = process.env.DEFAULT_VAULT_PASSWORD || 'rikkanas_vault_default_password';
+
 // 根目录（storage）
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
 
